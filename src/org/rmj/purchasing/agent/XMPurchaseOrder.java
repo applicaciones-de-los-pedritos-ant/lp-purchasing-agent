@@ -322,8 +322,12 @@ public class XMPurchaseOrder implements XMRecord{
                 lsSQL = MiscUtil.addCondition(getSQ_Stocks(), "a.cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
                 
                 if (fbByCode){
-                    lsSQL = MiscUtil.addCondition(lsSQL, "a.sBarCodex = " + SQLUtil.toSQL(fsValue));
-                    
+                    if(fbSearch){
+                        lsSQL = MiscUtil.addCondition(lsSQL, "a.sBarCodex = " + SQLUtil.toSQL(fsValue));
+                    }else{
+                        lsSQL = MiscUtil.addCondition(lsSQL, "a.sBarCodex LIKE " + SQLUtil.toSQL(fsValue + "%"));
+                    }
+                    System.out.println(lsSQL);
                     loRS = poGRider.executeQuery(lsSQL);
                     
                     loJSON = showFXDialog.jsonBrowse(poGRider, loRS, lsHeader, lsColName);
@@ -340,11 +344,13 @@ public class XMPurchaseOrder implements XMRecord{
                 if (loJSON != null){
                     setDetail(fnRow, fnCol, (String) loJSON.get("sStockIDx"));
                     setDetail(fnRow, "nUnitPrce", Double.valueOf((String) loJSON.get("nUnitPrce")));
+                    setDetail(fnRow, "nQtyOnHnd", Double.valueOf((String) loJSON.get("nQtyOnHnd")));
                     
                     return loJSON;
                 } else{
                     setDetail(fnRow, fnCol, "");
                     setDetail(fnRow, "nUnitPrce", 0.00);
+                    setDetail(fnRow, "nQtyOnHnd", 0.00);
                     return null;
                 }
             default:
@@ -607,6 +613,7 @@ public class XMPurchaseOrder implements XMRecord{
                     ", c.sDescript xModelNme" + 
                     ", d.sDescript xInvTypNm" + 
                     ", f.sMeasurNm" +
+                    ", e.nQtyOnHnd" +
                 " FROM Inventory a" + 
                         " LEFT JOIN Brand b" + 
                             " ON a.sBrandCde = b.sBrandCde" + 
