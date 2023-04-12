@@ -503,6 +503,10 @@ public class XMPOReceiving implements XMRecord{
                 
                 if (loJSON != null){
                     setDetail(fnRow, fnCol, (String) loJSON.get("sTransNox"));
+                    setMaster(5, (String) loJSON.get("sSupplier"));
+                    setMaster(6, (String) loJSON.get("sReferNox"));
+                    setMaster(17, (String) loJSON.get("sTransNox"));
+                    setMaster(18,  "PO");
                     loadOrder((String) loJSON.get("sTransNox"));
                     return loJSON;
                 } else{
@@ -768,7 +772,6 @@ public class XMPOReceiving implements XMRecord{
                     ", b.sBranchNm" + 
                     ", c.sDescript xDescript" + 
                     ", d.sClientNm" + 
-                    ", a.cTranStat" + 
                     ", CASE " +
                         " WHEN a.cTranStat = '0' THEN 'OPEN'" +
                         " WHEN a.cTranStat = '1' THEN 'CLOSED'" +
@@ -776,6 +779,8 @@ public class XMPOReceiving implements XMRecord{
                         " WHEN a.cTranStat = '3' THEN 'CANCELLED'" +
                         " WHEN a.cTranStat = '4' THEN 'VOID'" +
                         " END AS xTranStat" +
+                    ", a.sSupplier" + 
+                    ", a.sReferNox" + 
                 " FROM PO_Master a" + 
                             " LEFT JOIN Branch b" + 
                                 " ON a.sBranchCd = b.sBranchCd" + 
