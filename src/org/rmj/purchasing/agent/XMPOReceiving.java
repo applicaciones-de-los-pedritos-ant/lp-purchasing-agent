@@ -486,12 +486,13 @@ public class XMPOReceiving implements XMRecord{
                 
                 if (fbByCode){
                     lsSQL = MiscUtil.addCondition(lsSQL, "a.sTransNox = " + SQLUtil.toSQL(fsValue));
-                
+                    System.out.println(lsSQL);
                     loRS = poGRider.executeQuery(lsSQL);
                     
                     loJSON = showFXDialog.jsonBrowse(poGRider, loRS, lsHeader, lsColName);
                 }
                 else {
+                    System.out.println(lsSQL);
                     loJSON = showFXDialog.jsonSearch(poGRider, 
                                                         lsSQL, 
                                                         fsValue, 

@@ -315,17 +315,17 @@ public class XMPurchaseOrder implements XMRecord{
         
         switch(fnCol){
             case 3:
-                lsHeader = "Brand»Description»Unit»Model»Inv. Type»Barcode»Stock ID";
-                lsColName = "xBrandNme»sDescript»sMeasurNm»xModelNme»xInvTypNm»sBarCodex»sStockIDx";
-                lsColCrit = "b.sDescript»a.sDescript»f.sMeasurNm»c.sDescript»d.sDescript»a.sBarCodex»a.sStockIDx";
+                lsHeader = "Barcode»Brand»Description»Unit»Model»Inv. Type»Stock ID";
+                lsColName = "sBarCodex»xBrandNme»sDescript»sMeasurNm»xModelNme»xInvTypNm»sStockIDx";
+                lsColCrit = "a.sBarCodex»b.sDescript»a.sDescript»f.sMeasurNm»c.sDescript»d.sDescript»a.sStockIDx";
                 
                 lsSQL = MiscUtil.addCondition(getSQ_Stocks(), "a.cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
                 
                 if (fbByCode){
                     if(fbSearch){
-                        lsSQL = MiscUtil.addCondition(lsSQL, "a.sBarCodex = " + SQLUtil.toSQL(fsValue));
-                    }else{
                         lsSQL = MiscUtil.addCondition(lsSQL, "a.sBarCodex LIKE " + SQLUtil.toSQL(fsValue + "%"));
+                    }else{
+                        lsSQL = MiscUtil.addCondition(lsSQL, "a.sDescript LIKE " + SQLUtil.toSQL(fsValue + "%"));
                     }
                     System.out.println(lsSQL);
                     loRS = poGRider.executeQuery(lsSQL);
