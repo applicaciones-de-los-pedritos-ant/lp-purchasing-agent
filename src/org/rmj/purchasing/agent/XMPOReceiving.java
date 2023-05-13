@@ -479,9 +479,9 @@ public class XMPOReceiving implements XMRecord{
         int lnRow;
         switch(fnCol){
             case 3:
-                lsHeader = "Order No»Refer No»Branch»Date»Total»Inv. Type»Supplier»Code";
-                lsColName = "sTransNox»sReferNox»sBranchNm»dTransact»nTranTotl»xDescript»sClientNm»sInvTypCd";
-                lsColCrit = "a.sTransNox»a.sReferNox»b.sBranchNm»a.dTransact»a.nTranTotl»c.sDescript»d.sClientNm»a.sInvTypCd";
+                lsHeader = "Order No»Refer No»Branch»Date»Total»Supplier»Code";
+                lsColName = "sTransNox»sReferNox»sBranchNm»dTransact»nTranTotl»sClientNm»sInvTypCd";
+                lsColCrit = "a.sTransNox»a.sReferNox»b.sBranchNm»a.dTransact»a.nTranTotl»d.sClientNm»a.sInvTypCd";
                 lsSQL = getSQ_Purchases();
                 
                 if (fbByCode){

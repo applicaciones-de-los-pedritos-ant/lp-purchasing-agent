@@ -315,9 +315,9 @@ public class XMPurchaseOrder implements XMRecord{
         
         switch(fnCol){
             case 3:
-                lsHeader = "Barcode»Brand»Description»Unit»Model»Inv. Type»Stock ID";
-                lsColName = "sBarCodex»xBrandNme»sDescript»sMeasurNm»xModelNme»xInvTypNm»sStockIDx";
-                lsColCrit = "a.sBarCodex»b.sDescript»a.sDescript»f.sMeasurNm»c.sDescript»d.sDescript»a.sStockIDx";
+                lsHeader = "Barcode»Description»Brand»Unit»Qty. on hand»Inv. Type";
+                lsColName = "sBarCodex»sDescript»xBrandNme»sMeasurNm»nQtyOnHnd»xInvTypNm";
+                lsColCrit = "a.sBarCodex»a.sDescript»b.sDescript»f.sMeasurNm»e.nQtyOnHnd»d.sDescript";
                 
                 lsSQL = MiscUtil.addCondition(getSQ_Stocks(), "a.cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
                 
@@ -613,7 +613,7 @@ public class XMPurchaseOrder implements XMRecord{
                     ", c.sDescript xModelNme" + 
                     ", d.sDescript xInvTypNm" + 
                     ", f.sMeasurNm" +
-                    ", e.nQtyOnHnd" +
+                    ", IFNULL(e.nQtyOnHnd,0) nQtyOnHnd" +
                 " FROM Inventory a" + 
                         " LEFT JOIN Brand b" + 
                             " ON a.sBrandCde = b.sBrandCde" + 
