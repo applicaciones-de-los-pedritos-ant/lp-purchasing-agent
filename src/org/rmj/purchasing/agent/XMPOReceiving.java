@@ -416,7 +416,6 @@ public class XMPOReceiving implements XMRecord{
     }
     
     public boolean SearchMaster(int fnCol, String fsValue, boolean fbByCode){
-
         switch(fnCol){
             case 2: //sBranchCd
                 XMBranch loBranch = new XMBranch(poGRider, psBranchCd, true);
