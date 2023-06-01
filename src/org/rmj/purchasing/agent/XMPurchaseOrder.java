@@ -119,12 +119,11 @@ public class XMPurchaseOrder implements XMRecord{
     @Override
     public boolean updateRecord() {
         if(pnEditMode != EditMode.READY) {
-         return false;
-      }
-      else{
-         pnEditMode = EditMode.UPDATE;
-         return true;
-      }
+            return false;
+        } else {
+            pnEditMode = EditMode.UPDATE;
+            return true;
+        }
     }
 
     @Override
@@ -321,25 +320,13 @@ public class XMPurchaseOrder implements XMRecord{
                 
                 lsSQL = MiscUtil.addCondition(getSQ_Stocks(), "a.cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
                 
-                if (fbByCode){
-                    if(fbSearch){
-                        lsSQL = MiscUtil.addCondition(lsSQL, "a.sBarCodex LIKE " + SQLUtil.toSQL(fsValue + "%"));
-                    }else{
-                        lsSQL = MiscUtil.addCondition(lsSQL, "a.sDescript LIKE " + SQLUtil.toSQL(fsValue + "%"));
-                    }
-                    System.out.println(lsSQL);
-                    loRS = poGRider.executeQuery(lsSQL);
-                    
-                    loJSON = showFXDialog.jsonBrowse(poGRider, loRS, lsHeader, lsColName);
-                }else {
-                    loJSON = showFXDialog.jsonSearch(poGRider, 
+                loJSON = showFXDialog.jsonSearch(poGRider, 
                                                         lsSQL, 
                                                         fsValue, 
                                                         lsHeader, 
                                                         lsColName, 
                                                         lsColCrit, 
-                                                        fbSearch ? 1 : 5);
-                }
+                                                        fbByCode ? 0 : 1);
                                 
                 if (loJSON != null){
                     setDetail(fnRow, fnCol, (String) loJSON.get("sStockIDx"));
@@ -364,45 +351,24 @@ public class XMPurchaseOrder implements XMRecord{
     
     public boolean BrowseRecord(String fsValue, boolean fbByCode){
         JSONObject loJSON;
-        String lsHeader = "Inv. Type»Supplier»Date»Refer No»Trans No.";
-        String lsColName = "sInvTypCd»sClientNm»dTransact»sReferNox»sTransNox";
-        String lsColCrit = "a.sInvTypCd»d.sClientNm»a.dTransact»a.sReferNox»a.sTransNox";
+        String lsHeader = "Trans No.»Supplier»Refer No»Date";
+        String lsColName = "sTransNox»sClientNm»sReferNox»dTransact";
+        String lsColCrit = "a.sTransNox»d.sClientNm»a.sReferNox»a.dTransact";
         String lsSQL = getSQ_Purchase_Order();
         
-        if (fbByCode){
-            lsSQL = MiscUtil.addCondition(lsSQL, "a.sReferNox = " +  SQLUtil.toSQL(fsValue));
-            
-            ResultSet loRS = poGRider.executeQuery(lsSQL);
-            
-            loJSON = showFXDialog.jsonBrowse(poGRider, loRS, lsHeader, lsColName);
-        } else{
-            loJSON = showFXDialog.jsonSearch(poGRider, 
-                                                lsSQL, 
-                                                fsValue, 
-                                                lsHeader, 
-                                                lsColName, 
-                                                lsColCrit, 
-                                                1);
-        }
+        loJSON = showFXDialog.jsonSearch(poGRider, 
+                                            lsSQL, 
+                                            fsValue, 
+                                            lsHeader, 
+                                            lsColName, 
+                                            lsColCrit, 
+                                            fbByCode ? 2 : 1);
+        
         if(loJSON == null)
             return false;
         else{
             return openRecord((String) loJSON.get("sTransNox"));
-        } 
-       
-//        loJSON = showFXDialog.jsonSearch(poGRider, 
-//                                            lsSQL, 
-//                                            fsValue, 
-//                                            lsHeader, 
-//                                            lsColName, 
-//                                            lsColCrit, 
-//                                            fbByCode ? 0 : 1);
-//        
-//        if(loJSON == null)
-//            return false;
-//        else{
-//            return openRecord((String) loJSON.get("sTransNox"));
-//        } 
+        }
     }
     
     public Inventory GetInventory(String fsValue, boolean fbByCode, boolean fbSearch){        
@@ -453,8 +419,7 @@ public class XMPurchaseOrder implements XMRecord{
     }
     
     public boolean printRecord(){
-    
-        if (pnEditMode != EditMode.READY || poData == null){
+        if (poData == null){
             ShowMessageFX.Warning("Unable to print transaction.", "Warning", "No record loaded.");
             return false;
         }
@@ -470,69 +435,70 @@ public class XMPurchaseOrder implements XMRecord{
         params.put("dTransact", SQLUtil.dateFormat(poData.getDateTransact(), SQLUtil.FORMAT_LONG_DATE));
         params.put("sPrintdBy", psClientNm);
         
-        XMBranch loBranch = new XMBranch(poGRider, psBranchCd, true);
+        JSONObject loJSON;
         
-        JSONObject loJSON = loBranch.searchBranch(poData.getBranchCd(), true);
-        
-        if (loJSON == null) 
-            params.put("xBranchNm", "NOT SPECIFIED");
-        else
-            params.put("xBranchNm", (String) loJSON.get("sBranchNm"));
-        
-        
-        loJSON = loBranch.searchBranch(poData.getDestinat(), true);
-        
-        if (loJSON == null)
-            params.put("xDestinat", "NOT SPECIFIED");
-        else
-            params.put("xDestinat", (String) loJSON.get("sBranchNm"));
-        
-        XMSupplier loSupplier = new XMSupplier(poGRider, psBranchCd, true);
-        
-        loJSON = loSupplier.searchSupplier(poData.getSupplier(), psBranchCd, true);
-        
-        if (loJSON == null)
-            params.put("xSupplier", "NOT SPECIFIED");
-        else
-            params.put("xSupplier", (String) loJSON.get("sClientNm"));
-        
-        params.put("xRemarksx", poData.getRemarks());
-        
-        JSONArray loArray = new JSONArray();
-        
-        String lsBarCodex;
-        String lsDescript;
-        String lsMeasurex;
-        Inventory loInventory = new Inventory(poGRider, psBranchCd, true);
-        
-        for (int lnCtr = 0; lnCtr <= poControl.ItemCount() -1; lnCtr ++){
-            loInventory.BrowseRecord((String) poControl.getDetail(lnCtr, "sStockIDx"), true, false);
-            lsBarCodex = (String) loInventory.getMaster("sBarCodex");
-            lsDescript = (String) loInventory.getMaster("sDescript");
-            lsMeasurex = (String) loInventory.getMeasureMent(loInventory.getMaster("sMeasurID").toString());
-            
-            loJSON = new JSONObject();
-            loJSON.put("sField01", lsBarCodex);
-            loJSON.put("sField02", lsDescript);
-            loJSON.put("sField05", lsMeasurex);
-            loJSON.put("nField01", poControl.getDetail(lnCtr, "nQuantity"));
-            loJSON.put("lField01", poControl.getDetail(lnCtr, "nUnitPrce"));
-            loArray.add(loJSON);
-        }
-                 
+//        XMBranch loBranch = new XMBranch(poGRider, psBranchCd, true);
+
+//        loJSON = loBranch.searchBranch(poData.getBranchCd(), true);
+//        if (loJSON == null) 
+//            params.put("xBranchNm", "NOT SPECIFIED");
+//        else
+//            params.put("xBranchNm", (String) loJSON.get("sBranchNm"));
+//        
+//        
+//        loJSON = loBranch.searchBranch(poData.getDestinat(), true);
+//        
+//        if (loJSON == null)
+//            params.put("xDestinat", "NOT SPECIFIED");
+//        else
+//            params.put("xDestinat", (String) loJSON.get("sBranchNm"));
         try {
+            String lsSQL = "SELECT sClientNm FROM Client_Master WHERE sClientID = " + SQLUtil.toSQL(poData.getSupplier());
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+
+            if (loRS.next()){
+                params.put("xSupplier", loRS.getString("sClientNm"));
+            } else {
+                params.put("xSupplier", "NOT SPECIFIED");
+            }
+
+            params.put("xRemarksx", poData.getRemarks());
+
+            JSONArray loArray = new JSONArray();
+
+            String lsBarCodex;
+            String lsDescript;
+            String lsMeasurex;
+            Inventory loInventory = new Inventory(poGRider, psBranchCd, true);
+
+            for (int lnCtr = 0; lnCtr <= poControl.ItemCount() -1; lnCtr ++){
+                loInventory.BrowseRecord((String) poControl.getDetail(lnCtr, "sStockIDx"), true, false);
+                lsBarCodex = (String) loInventory.getMaster("sBarCodex");
+                lsDescript = (String) loInventory.getMaster("sDescript");
+                lsMeasurex = (String) loInventory.getMeasureMent(loInventory.getMaster("sMeasurID").toString());
+
+                loJSON = new JSONObject();
+                loJSON.put("sField01", lsBarCodex);
+                loJSON.put("sField02", lsDescript);
+                loJSON.put("sField05", lsMeasurex);
+                loJSON.put("nField01", poControl.getDetail(lnCtr, "nQuantity"));
+                loJSON.put("lField01", poControl.getDetail(lnCtr, "nUnitPrce"));
+                loArray.add(loJSON);
+            }
+                 
+       
             InputStream stream = new ByteArrayInputStream(loArray.toJSONString().getBytes("UTF-8"));
             JsonDataSource jrjson;
             
             jrjson = new JsonDataSource(stream);
             
             JasperPrint jrprint = JasperFillManager.fillReport(poGRider.getReportPath() + 
-                                                                "PurchaseOrder.jasper", params, jrjson);
+                                                                "PurchaseOrderLP.jasper", params, jrjson);
         
             JasperViewer jv = new JasperViewer(jrprint, false);     
             jv.setVisible(true);
             jv.setAlwaysOnTop(true);
-        } catch (JRException | UnsupportedEncodingException ex) {
+        } catch (JRException | UnsupportedEncodingException | SQLException ex) {
             Logger.getLogger(XMPOReceiving.class.getName()).log(Level.SEVERE, null, ex);
             return false;
         }

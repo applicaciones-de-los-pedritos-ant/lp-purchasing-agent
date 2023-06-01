@@ -8,9 +8,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -29,7 +27,6 @@ import org.rmj.appdriver.MiscUtil;
 import org.rmj.appdriver.SQLUtil;
 import org.rmj.appdriver.agentfx.CommonUtils;
 import org.rmj.appdriver.agentfx.ShowMessageFX;
-import org.rmj.appdriver.agentfx.StringHelper;
 import org.rmj.appdriver.agentfx.ui.showFXDialog;
 import org.rmj.cas.client.base.XMClient;
 import org.rmj.cas.inventory.base.Inventory;
@@ -114,6 +111,7 @@ public class XMPOReceiving implements XMRecord{
             poData.setDateTransact(poGRider.getServerDate());
             poData.setReferDate(poGRider.getServerDate());
             poData.setVATRate(pxeTaxRate);
+            poData.setBranchCd(poGRider.getBranchCode());
             
             addDetail();
             pnEditMode = EditMode.ADDNEW;
@@ -216,7 +214,7 @@ public class XMPOReceiving implements XMRecord{
     }
     
     public boolean printRecord(){       
-        if (pnEditMode != EditMode.READY || poData == null){
+        if (poData == null){
             ShowMessageFX.Warning("Unable to print transaction.", "Warning", "No record loaded.");
             return false;
         }
@@ -226,7 +224,7 @@ public class XMPOReceiving implements XMRecord{
         params.put("sCompnyNm", "Guanzon Group");
         params.put("sBranchNm", poGRider.getBranchName());
         params.put("sAddressx", poGRider.getAddress() + ", " + poGRider.getTownName() + " " +poGRider.getProvince());
-        JSONObject loSupplier = GetSupplier((String)getMaster(5), true);
+        JSONObject loSupplier = GetSupplier(poData.getSupplier(), true);
         if (loSupplier != null) {
             params.put("sSupplier", loSupplier.get("sClientNm"));
         }else{
@@ -343,10 +341,15 @@ public class XMPOReceiving implements XMRecord{
         }
     }
     
-    public boolean addDetail(){return poControl.addDetail();}
-    public boolean addDetail(String fsOrderNox){
-        addDetail();
-        poControl.setDetail(poControl.ItemCount() -1, "sOrderNox", fsOrderNox);
+    public boolean addDetail(){
+        poControl.addDetail();
+        
+        if (getDetailCount() >= 2){
+            poControl.setDetail(poControl.ItemCount() - 1, "sOrderNox", (String) getDetail(getDetailCount() - 2, "sOrderNox"));
+        } else {
+            poControl.setDetail(poControl.ItemCount() - 1, "sOrderNox", "");
+        }
+        
         return true;
     }
     
@@ -459,6 +462,42 @@ public class XMPOReceiving implements XMRecord{
                     return true;
                 }
                 break;
+            case 17:
+                String lsHeader = "Order No»Supplier»Refer No»Date";
+                String lsColName = "sTransNox»sClientNm»sReferNox»dTransact";
+                String lsColCrit = "a.sTransNox»d.sClientNm»a.sReferNox»a.dTransact";
+                String lsSQL = getSQ_Purchases();
+                
+                JSONObject loJSON = showFXDialog.jsonSearch(poGRider, 
+                                                            lsSQL, 
+                                                            fsValue, 
+                                                            lsHeader, 
+                                                            lsColName, 
+                                                            lsColCrit, 
+                                                            fbByCode ? 0 : 2);
+                
+                
+                if (loJSON != null){
+                    setMaster(5, (String) loJSON.get("sSupplier"));
+                    MasterRetreived(5);
+                    
+                    setMaster(8, (String) loJSON.get("sTermCode"));
+                    MasterRetreived(8);                    
+                    
+                    setMaster(17, (String) loJSON.get("sTransNox"));
+                    setMaster(18,  "PO");
+                    MasterRetreived(17);
+                    
+                    loadOrder((String) loJSON.get("sTransNox"));
+                    return true;
+                } else{
+                    setMaster(17, (String) loJSON.get("sTransNox"));
+                    setMaster(18,  "PO");
+                    MasterRetreived(17);
+                    
+                    return false;
+                }
+                
         }
         
         return false;
@@ -478,36 +517,21 @@ public class XMPOReceiving implements XMRecord{
         int lnRow;
         switch(fnCol){
             case 3:
-                lsHeader = "Order No»Refer No»Branch»Date»Total»Supplier»Code";
-                lsColName = "sTransNox»sReferNox»sBranchNm»dTransact»nTranTotl»sClientNm»sInvTypCd";
-                lsColCrit = "a.sTransNox»a.sReferNox»b.sBranchNm»a.dTransact»a.nTranTotl»d.sClientNm»a.sInvTypCd";
+                lsHeader = "Order No»Supplier»Refer No»Date";
+                lsColName = "sTransNox»sClientNm»sReferNox»dTransact";
+                lsColCrit = "a.sTransNox»d.sClientNm»a.sReferNox»a.dTransact";
                 lsSQL = getSQ_Purchases();
                 
-                if (fbByCode){
-                    lsSQL = MiscUtil.addCondition(lsSQL, "a.sTransNox = " + SQLUtil.toSQL(fsValue));
-                    System.out.println(lsSQL);
-                    loRS = poGRider.executeQuery(lsSQL);
-                    
-                    loJSON = showFXDialog.jsonBrowse(poGRider, loRS, lsHeader, lsColName);
-                }
-                else {
-                    System.out.println(lsSQL);
-                    loJSON = showFXDialog.jsonSearch(poGRider, 
-                                                        lsSQL, 
-                                                        fsValue, 
-                                                        lsHeader, 
-                                                        lsColName, 
-                                                        lsColCrit, 
-                                                        fbSearch ? 6 : 0);
-                }
+                loJSON = showFXDialog.jsonSearch(poGRider, 
+                                                    lsSQL, 
+                                                    fsValue, 
+                                                    lsHeader, 
+                                                    lsColName, 
+                                                    lsColCrit, 
+                                                    fbByCode ? 0 : 2);
                 
                 if (loJSON != null){
-                    setDetail(fnRow, fnCol, (String) loJSON.get("sTransNox"));
-                    setMaster(5, (String) loJSON.get("sSupplier"));
-                    setMaster(6, (String) loJSON.get("sReferNox"));
-                    setMaster(17, (String) loJSON.get("sTransNox"));
-                    setMaster(18,  "PO");
-                    loadOrder((String) loJSON.get("sTransNox"));
+                    setDetail(fnRow, fnCol, (String) loJSON.get("sTransNox"));                    
                     return loJSON;
                 } else{
                     setDetail(fnRow, fnCol, "");
@@ -704,13 +728,13 @@ public class XMPOReceiving implements XMRecord{
                     "  a.sTransNox" +
                     ", a.nEntryNox" + 
                     ", a.sStockIDx" + 
-                    ", a.nQuantity" + 
+                    ", (a.nQuantity - a.nReceived - a.nCancelld) nQuantity" + 
                     ", a.nUnitPrce" + 
                     ", a.nReceived" + 
                     ", a.nCancelld" + 
                 " FROM PO_Detail a" + 
                 " WHERE a.sTransNox = " + SQLUtil.toSQL(fsOrderNox) +
-                "AND a.nCancelld = " + SQLUtil.toSQL("0");
+                    " ORDER BY a.nEntryNox";
     }
     
     private String getSQ_Inventory(){
@@ -781,6 +805,7 @@ public class XMPOReceiving implements XMRecord{
                         " END AS xTranStat" +
                     ", a.sSupplier" + 
                     ", a.sReferNox" + 
+                    ", a.sTermCode" +
                 " FROM PO_Master a" + 
                             " LEFT JOIN Branch b" + 
                                 " ON a.sBranchCd = b.sBranchCd" + 
@@ -788,7 +813,8 @@ public class XMPOReceiving implements XMRecord{
                                 " ON a.sInvTypCd = c.sInvTypCd" + 
                         ", Client_Master d" + 
                 " WHERE a.sSupplier = d.sClientID" + 
-                    " AND a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode());
+                    " AND LEFT(a.sTransNox, 4) = " + SQLUtil.toSQL(poGRider.getBranchCode()) +
+                    " AND a.cTranStat = '1'";
     }
     
     private String getSQ_POReceiving(){
@@ -829,7 +855,8 @@ public class XMPOReceiving implements XMRecord{
                                                 " LEFT JOIN Inv_Type c" + 
                                                     " ON a.sInvTypCd = c.sInvTypCd" + 
                                             ", Client_Master d" + 
-                                    " WHERE a.sSupplier = d.sClientID", lsCondition);
+                                    " WHERE a.sSupplier = d.sClientID" +
+                                        " AND LEFT(a.sTransNox, 4) = " + SQLUtil.toSQL(poGRider.getBranchCode()), lsCondition);
     }
     
     public void setTranStat(int fnValue){this.pnTranStat = fnValue;}
@@ -854,41 +881,19 @@ public class XMPOReceiving implements XMRecord{
     private void loadOrder(String fsOrderNox){
         Connection loCon = poGRider.getConnection();
 
-        boolean lbHasRec = false;
         Statement loStmt = null;
         ResultSet loRS = null;
         
         try {
             loStmt = loCon.createStatement();
             loRS = loStmt.executeQuery(getPODetail(fsOrderNox));
-//            if(ShowMessageFX.YesNo("Do you want to reset detail?", "Title", null)==true){
-//                poDetail = null;
-//                poDetail = new UnitPOReceivingDetail();
-//            }else{
-//                return;
-//            }
-//            loRS.beforeFirst();
-//            for(int lnCtr=0; lnCtr<=loRS.getMetaData().getColumnCount() -1; lnCtr++){
-//                addDetail();
-//                setDetail(lnCtr,"sStockIDx", loRS.getString("sStockIDx"));
-//                setDetail(lnCtr,"nQuantity", loRS.getString("nQuantity"));
-//                setDetail(lnCtr,"nUnitPrce", loRS.getString("nUnitPrce"));
-//                
-//                if(loRS.isLast()){
-//                    addDetail();
-//                }
-//            }
-            loRS.beforeFirst();
+            
             while (loRS.next()) {
-                addDetail();
                 setDetail(poControl.ItemCount() -1,"sOrderNox", loRS.getString("sTransNox"));
                 setDetail(poControl.ItemCount() -1,"sStockIDx", loRS.getString("sStockIDx"));
                 setDetail(poControl.ItemCount() -1,"nUnitPrce", loRS.getDouble("nUnitPrce"));
                 setDetail(poControl.ItemCount() -1,"nQuantity", loRS.getDouble("nQuantity"));                
-                
-                if(loRS.isLast()){
-                    addDetail();
-                }
+                addDetail();
             }
         } catch (SQLException ex) {
             ex.printStackTrace();
