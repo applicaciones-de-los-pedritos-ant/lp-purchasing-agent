@@ -7,7 +7,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
@@ -420,16 +419,19 @@ public class XMPOReturn implements XMRecord{
                 MasterRetreived(fnCol);
                 return lbReturn;
             case 5: //sSupplier
-                 XMSupplier loSupplier = new XMSupplier(poGRider, psBranchCd, true);
+                XMSupplier loSupplier = new XMSupplier(poGRider, psBranchCd, true);
                 if (loSupplier.browseRecord(fsValue, psBranchCd, fbByCode)){
                     setMaster(fnCol, loSupplier.getMaster("sClientID"));
-                    MasterRetreived(fnCol);
                     lbReturn = true;
+                } else{
+                    setMaster(fnCol, "");
                 }
-                break;
+                
+                MasterRetreived(fnCol);
+                return lbReturn;
             case 16: //PO Receiving Trans
                 XMPOReceiving loPORec = new XMPOReceiving(poGRider, psBranchCd, true);
-                loPORec.setTranStat(2);
+                loPORec.setTranStat(1);
                 
                 if (loPORec.BrowseRecord(fsValue, false)){
                     setMaster(fnCol, loPORec.getMaster("sTransNox"));
@@ -507,26 +509,18 @@ public class XMPOReturn implements XMRecord{
                     lsSQL = MiscUtil.addCondition(getSQ_Stocks((String) getMaster("sPOTransx")), 
                                                     "a.cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
                 
-                if (fbByCode){
-                    lsSQL = MiscUtil.addCondition(lsSQL, "a.sBarCodex = " + SQLUtil.toSQL(fsValue));
-                    
-                    loRS = poGRider.executeQuery(lsSQL);
-                    
-                    loJSON = showFXDialog.jsonBrowse(poGRider, loRS, lsHeader, lsColName);
-                }else {
-                    loJSON = showFXDialog.jsonSearch(poGRider, 
+                loJSON = showFXDialog.jsonSearch(poGRider, 
                                                         lsSQL, 
                                                         fsValue, 
                                                         lsHeader, 
                                                         lsColName, 
                                                         lsColCrit, 
-                                                        fbSearch ? 1 : 5);
-                }
+                                                        fbByCode ? 5 : 1);
                                 
                 if (loJSON != null){
                     setDetail(fnRow, fnCol, (String) loJSON.get("sStockIDx"));
                     if (loJSON.get("nQuantity")!=null){
-                        setDetail(fnRow, "nQuantity", Integer.valueOf((String)loJSON.get("nQuantity")));
+                        setDetail(fnRow, "nQuantity", Double.valueOf((String)loJSON.get("nQuantity")));
                         setDetail(fnRow, "dExpiryDt", CommonUtils.toDate((String) loJSON.get("dExpiryDt")));
                         setDetail(fnRow, "nFreightx", Double.valueOf((String)loJSON.get("nFreightx")));
                         setDetail(fnRow, "nUnitPrce", Double.valueOf((String)loJSON.get("xUnitPrce")));
