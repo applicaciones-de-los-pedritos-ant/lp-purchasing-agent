@@ -28,10 +28,10 @@ import org.rmj.appdriver.agentfx.ui.showFXDialog;
 import org.rmj.appdriver.constants.RecordStatus;
 import org.rmj.cas.client.base.XMClient;
 import org.rmj.cas.inventory.base.Inventory;
-import org.rmj.cas.parameter.agent.XMBranch;
-import org.rmj.cas.parameter.agent.XMInventoryType;
-import org.rmj.cas.parameter.agent.XMSupplier;
-import org.rmj.cas.parameter.agent.XMTerm;
+import org.rmj.lp.parameter.agent.XMBranch;
+import org.rmj.lp.parameter.agent.XMInventoryType;
+import org.rmj.lp.parameter.agent.XMSupplier;
+import org.rmj.lp.parameter.agent.XMTerm;
 import org.rmj.cas.purchasing.base.PurchaseOrder;
 import org.rmj.cas.purchasing.pojo.UnitPODetail;
 import org.rmj.cas.purchasing.pojo.UnitPOMaster;
@@ -136,7 +136,8 @@ public class XMPurchaseOrder implements XMRecord{
             UnitPOMaster loResult;
             if(pnEditMode == EditMode.ADDNEW)
                 loResult = poControl.saveUpdate(poData, "");
-            else loResult = poControl.saveUpdate(poData, (String) poData.getValue(1));
+            else 
+                loResult = poControl.saveUpdate(poData, (String) poData.getValue(1));
 
             if(loResult == null){
                 ShowMessageFX();
@@ -436,22 +437,7 @@ public class XMPurchaseOrder implements XMRecord{
         params.put("sPrintdBy", psClientNm);
         
         JSONObject loJSON;
-        
-//        XMBranch loBranch = new XMBranch(poGRider, psBranchCd, true);
 
-//        loJSON = loBranch.searchBranch(poData.getBranchCd(), true);
-//        if (loJSON == null) 
-//            params.put("xBranchNm", "NOT SPECIFIED");
-//        else
-//            params.put("xBranchNm", (String) loJSON.get("sBranchNm"));
-//        
-//        
-//        loJSON = loBranch.searchBranch(poData.getDestinat(), true);
-//        
-//        if (loJSON == null)
-//            params.put("xDestinat", "NOT SPECIFIED");
-//        else
-//            params.put("xDestinat", (String) loJSON.get("sBranchNm"));
         try {
             String lsSQL = "SELECT sClientNm FROM Client_Master WHERE sClientID = " + SQLUtil.toSQL(poData.getSupplier());
             ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -461,7 +447,28 @@ public class XMPurchaseOrder implements XMRecord{
             } else {
                 params.put("xSupplier", "NOT SPECIFIED");
             }
-
+            
+            lsSQL = "SELECT sClientNm FROM Client_Master WHERE sClientID IN (" +
+                        "SELECT sEmployNo FROM xxxSysUser WHERE sUserIDxx = " + SQLUtil.toSQL(poData.getApprovedBy().isEmpty() ? poData.getPreparedBy() : poData.getApprovedBy()) + ")";
+            loRS = poGRider.executeQuery(lsSQL);
+            
+            if (loRS.next()){
+                params.put("sApprval1", loRS.getString("sClientNm"));
+            } else {
+                params.put("sApprval1", "");
+            }
+            
+            params.put("sApprval2", "");
+            
+//            lsSQL = "SELECT sClientNm FROM Client_Master WHERE sClientID IN (" +
+//                        "SELECT sEmployNo FROM xxxSysUser WHERE sUserIDxx = " + SQLUtil.toSQL(poData.getApprovedBy()) + ")";
+//            loRS = poGRider.executeQuery(lsSQL);
+//            
+//            if (loRS.next()){
+//                params.put("sApprval2", loRS.getString("sClientNm"));
+//            } else {
+//                params.put("sApprval2", "NOT SPECIFIED");
+//            }
             params.put("xRemarksx", poData.getRemarks());
 
             JSONArray loArray = new JSONArray();
@@ -480,12 +487,10 @@ public class XMPurchaseOrder implements XMRecord{
                 loJSON = new JSONObject();
                 loJSON.put("sField01", lsBarCodex);
                 loJSON.put("sField02", lsDescript);
-                loJSON.put("sField05", lsMeasurex);
+                loJSON.put("sField03", lsMeasurex);
                 loJSON.put("nField01", poControl.getDetail(lnCtr, "nQuantity"));
-                loJSON.put("lField01", poControl.getDetail(lnCtr, "nUnitPrce"));
                 loArray.add(loJSON);
             }
-                 
        
             InputStream stream = new ByteArrayInputStream(loArray.toJSONString().getBytes("UTF-8"));
             JsonDataSource jrjson;
@@ -638,7 +643,7 @@ public class XMPurchaseOrder implements XMRecord{
     private double computeTotal(){
         double lnTranTotal = 0;
         for (int lnCtr = 0; lnCtr <= poControl.ItemCount()-1; lnCtr ++){
-            lnTranTotal += Double.valueOf(String.valueOf(poControl.getDetail(lnCtr, "nQuantity"))) * (Double) poControl.getDetail(lnCtr, "nUnitPrce");
+            lnTranTotal += Double.valueOf(String.valueOf(poControl.getDetail(lnCtr, "nQuantity"))) * Double.valueOf(String.valueOf(poControl.getDetail(lnCtr, "nUnitPrce")));
         }
         
         return lnTranTotal;
