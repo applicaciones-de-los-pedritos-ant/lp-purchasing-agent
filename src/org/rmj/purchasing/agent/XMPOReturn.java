@@ -150,7 +150,6 @@ public class XMPOReturn implements XMRecord{
             if(pnEditMode == EditMode.ADDNEW)
                 loResult = poControl.saveUpdate(poData, "");
             else loResult = poControl.saveUpdate(poData, (String) poData.getValue(1));
-
             if(loResult == null){
                 ShowMessageFX();
                 return false;
@@ -509,6 +508,7 @@ public class XMPOReturn implements XMRecord{
                     lsSQL = MiscUtil.addCondition(getSQ_Stocks((String) getMaster("sPOTransx")), 
                                                     "a.cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
                 
+                System.out.println(lsSQL);
                 loJSON = showFXDialog.jsonSearch(poGRider, 
                                                         lsSQL, 
                                                         fsValue, 
@@ -698,7 +698,7 @@ public class XMPOReturn implements XMRecord{
                                 " ON a.sMeasurID = f.sMeasurID" +
                         ", Inv_Master e" + 
                         ", PO_Receiving_Detail g" +
-                        ", PO_Receiving_Master h" +
+                        ", PO_Receiving_Master h" + 
                     " WHERE a.sStockIDx = e.sStockIDx" + 
                         " AND g.sTransNox = h.sTransNox" +
                         " AND e.sStockIDx = g.sStockIDx" +
@@ -782,7 +782,8 @@ public class XMPOReturn implements XMRecord{
                                             " LEFT JOIN PO_Receiving_Master e" +
                                                 " ON a.sPOTransx = e.sTransNox" +
                                         ", Client_Master d" + 
-                                    " WHERE a.sSupplier = d.sClientID", lsCondition);
+                                    " WHERE a.sSupplier = d.sClientID" + 
+                                    " AND LEFT(a.sTransNox, 4) = " + SQLUtil.toSQL(poGRider.getBranchCode()), lsCondition);
     }
     
     public void setTranStat(int fnValue){this.pnTranStat = fnValue;}
