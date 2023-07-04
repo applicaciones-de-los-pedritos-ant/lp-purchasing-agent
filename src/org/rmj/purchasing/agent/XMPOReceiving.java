@@ -406,7 +406,7 @@ public class XMPOReceiving implements XMRecord{
     
     private double computeTaxWHeld(){
         DecimalFormat df2 = new DecimalFormat(".##");
-        String lsTaxWHeld = df2.format(((Double) poData.getTranTotal() / pxeTaxExcludRte) * pxeTaxWHeldRate);
+        String lsTaxWHeld = df2.format((Double.valueOf(poData.getTranTotal().toString()) / pxeTaxExcludRte) * pxeTaxWHeldRate);
         return Double.parseDouble(lsTaxWHeld);        
     }
     
