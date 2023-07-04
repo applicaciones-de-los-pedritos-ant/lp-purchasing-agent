@@ -654,7 +654,7 @@ public class XMPOReceiving implements XMRecord{
         String lsColCrit = "a.dRefernce»d.sClientNm»a.sReferNox»c.sDescript»a.dTransact»a.sTransNox";
         String lsSQL = getSQ_POReceiving();
         
-       
+       System.out.println(lsSQL);
         JSONObject loJSON = showFXDialog.jsonSearch(poGRider, 
                                                     lsSQL, 
                                                     fsValue, 

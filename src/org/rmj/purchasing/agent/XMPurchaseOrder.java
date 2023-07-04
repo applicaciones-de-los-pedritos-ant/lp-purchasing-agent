@@ -320,7 +320,7 @@ public class XMPurchaseOrder implements XMRecord{
                 lsColCrit = "a.sBarCodex»a.sDescript»b.sDescript»f.sMeasurNm»e.nQtyOnHnd»d.sDescript";
                 
                 lsSQL = MiscUtil.addCondition(getSQ_Stocks(), "a.cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
-                
+                System.out.println(lsSQL);
                 loJSON = showFXDialog.jsonSearch(poGRider, 
                                                         lsSQL, 
                                                         fsValue, 
@@ -356,6 +356,7 @@ public class XMPurchaseOrder implements XMRecord{
         String lsColName = "sTransNox»sClientNm»sReferNox»dTransact";
         String lsColCrit = "a.sTransNox»d.sClientNm»a.sReferNox»a.dTransact";
         String lsSQL = getSQ_Purchase_Order();
+        System.out.println(lsSQL);
         
         loJSON = showFXDialog.jsonSearch(poGRider, 
                                             lsSQL, 
@@ -489,6 +490,7 @@ public class XMPurchaseOrder implements XMRecord{
                 loJSON.put("sField02", lsDescript);
                 loJSON.put("sField03", lsMeasurex);
                 loJSON.put("nField01", poControl.getDetail(lnCtr, "nQuantity"));
+                loJSON.put("lField01", poControl.getDetail(lnCtr, "nUnitPrce"));
                 loArray.add(loJSON);
             }
        
@@ -548,8 +550,8 @@ public class XMPurchaseOrder implements XMRecord{
                             " LEFT JOIN Inv_Type c" + 
                                 " ON a.sInvTypCd = c.sInvTypCd" + 
                         ", Client_Master d" + 
-                " WHERE a.sSupplier ="
-                + " d.sClientID", lsCondition);
+                " WHERE a.sSupplier = d.sClientID " + 
+                " AND LEFT(a.sTransNox, 4) = " + SQLUtil.toSQL(poGRider.getBranchCode()), lsCondition);
     }
     
     private String getSQ_Stocks(){
