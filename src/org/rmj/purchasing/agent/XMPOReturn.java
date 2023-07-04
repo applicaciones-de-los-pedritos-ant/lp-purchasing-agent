@@ -300,14 +300,14 @@ public class XMPOReturn implements XMRecord{
     private double computeTotal(){
         double lnTranTotal = 0;
         for (int lnCtr = 0; lnCtr <= poControl.ItemCount()-1; lnCtr ++){
-            lnTranTotal += (Double.valueOf(poControl.getDetail(lnCtr, "nQuantity").toString()) * (Double) poControl.getDetail(lnCtr, "nUnitPrce")) 
-                                + (Double) poControl.getDetail(lnCtr, "nFreightx");
+            lnTranTotal += (Double.valueOf(poControl.getDetail(lnCtr, "nQuantity").toString()) *Double.valueOf(poControl.getDetail(lnCtr, "nUnitPrce").toString())) 
+                                + Double.valueOf(poControl.getDetail(lnCtr, "nFreightx").toString());
         }
         
         //add the freight charge to total order
-        lnTranTotal += (Double) poData.getFreightCharge();
+        lnTranTotal += Double.valueOf(poData.getFreightCharge().toString());
         //less the discounts
-        lnTranTotal = lnTranTotal - (lnTranTotal * (Double) poData.getDiscountRate()) - (Double) poData.getAdditionalDisc();
+        lnTranTotal = lnTranTotal - (lnTranTotal * Double.valueOf(poData.getDiscountRate().toString())) - Double.valueOf(poData.getAdditionalDisc().toString());
         return lnTranTotal;
     }
     
