@@ -519,6 +519,9 @@ public class XMPOReturn implements XMRecord{
                                 
                 if (loJSON != null){
                     setDetail(fnRow, fnCol, (String) loJSON.get("sStockIDx"));
+                        System.out.println("sBrandNme = " + loJSON.get("xBrandNme"));
+                    
+                        setDetail(fnRow, "sBrandNme", (String) loJSON.get("xBrandNme"));
                     if (loJSON.get("nQuantity")!=null){
                         setDetail(fnRow, "nQuantity", Double.valueOf((String)loJSON.get("nQuantity")));
                         setDetail(fnRow, "dExpiryDt", CommonUtils.toDate((String) loJSON.get("dExpiryDt")));
@@ -528,6 +531,7 @@ public class XMPOReturn implements XMRecord{
                     return loJSON;
                 } else{
                     setDetail(fnRow, fnCol, "");
+                    setDetail(fnRow, "sBrandNme", "");
                     return null;
                 }
             default:
