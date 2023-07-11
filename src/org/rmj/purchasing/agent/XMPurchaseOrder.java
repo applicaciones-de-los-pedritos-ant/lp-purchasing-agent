@@ -333,12 +333,14 @@ public class XMPurchaseOrder implements XMRecord{
                     setDetail(fnRow, fnCol, (String) loJSON.get("sStockIDx"));
                     setDetail(fnRow, "nUnitPrce", Double.valueOf((String) loJSON.get("nUnitPrce")));
                     setDetail(fnRow, "nQtyOnHnd", Double.valueOf((String) loJSON.get("nQtyOnHnd")));
+                    setDetail(fnRow, "sBrandNme", (String) loJSON.get("xBrandNme"));
                     
                     return loJSON;
                 } else{
                     setDetail(fnRow, fnCol, "");
                     setDetail(fnRow, "nUnitPrce", 0.00);
                     setDetail(fnRow, "nQtyOnHnd", 0.00);
+                    setDetail(fnRow, "sBrandNme", "");
                     return null;
                 }
             default:

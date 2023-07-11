@@ -571,6 +571,7 @@ public class XMPOReceiving implements XMRecord{
                     setDetail(fnRow, 101, "");
                     setDetail(fnRow, 102, "");
                     
+                    setDetail(fnRow, "sBrandNme", (String) loJSON.get("xBrandNme"));
                     poControl.setDetail(fnRow, "sMeasurNm",loJSON.get("sMeasurNm"));
                     if (fnCol == 4) setDetail(fnRow, "nUnitPrce", Double.valueOf((String)loJSON.get("nUnitPrce")));
                     if (loJSON.get("nQuantity") != null) setDetail(fnRow, 7, Double.valueOf((String)loJSON.get("nQuantity")));
@@ -581,6 +582,7 @@ public class XMPOReceiving implements XMRecord{
                     setDetail(fnRow, 100, "");
                     setDetail(fnRow, 101, "");
                     setDetail(fnRow, 102, "");
+                    setDetail(fnRow, "sBrandNme", "");
                     
                     if (fnCol == 4)
                         setDetail(fnRow, "nUnitPrce", 0.00);
@@ -732,7 +734,12 @@ public class XMPOReceiving implements XMRecord{
                     ", a.nUnitPrce" + 
                     ", a.nReceived" + 
                     ", a.nCancelld" + 
+                    ", IFNULL(c.sDescript,'') sBrandNme" + 
                 " FROM PO_Detail a" + 
+                " LEFT JOIN Inventory b" + 
+                "   ON a.sStockIDx = b.sStockIDx" + 
+                " LEFT JOIN Brand c" + 
+                "   ON b.sBrandCde = c.sBrandCde" + 
                 " WHERE a.sTransNox = " + SQLUtil.toSQL(fsOrderNox) +
                     " ORDER BY a.nEntryNox";
     }
@@ -885,14 +892,15 @@ public class XMPOReceiving implements XMRecord{
         ResultSet loRS = null;
         
         try {
+            
             loStmt = loCon.createStatement();
             loRS = loStmt.executeQuery(getPODetail(fsOrderNox));
-            
             while (loRS.next()) {
                 setDetail(poControl.ItemCount() -1,"sOrderNox", loRS.getString("sTransNox"));
                 setDetail(poControl.ItemCount() -1,"sStockIDx", loRS.getString("sStockIDx"));
                 setDetail(poControl.ItemCount() -1,"nUnitPrce", loRS.getDouble("nUnitPrce"));
-                setDetail(poControl.ItemCount() -1,"nQuantity", loRS.getDouble("nQuantity"));                
+                setDetail(poControl.ItemCount() -1,"nQuantity", loRS.getDouble("nQuantity"));  
+                setDetail(poControl.ItemCount() -1,"sBrandNme", loRS.getString("sBrandNme"));                
                 addDetail();
             }
         } catch (SQLException ex) {
