@@ -567,7 +567,7 @@ public class XMPOReceiving implements XMRecord{
                 if (loJSON != null){
                     setDetail(fnRow, fnCol, (String) loJSON.get("sStockIDx"));
                     //delete the barcode and descript on temp table
-                    setDetail(fnRow, 100, "");
+                    setDetail(fnRow, 100, (String) loJSON.get("sBarCodex"));
                     setDetail(fnRow, 101, "");
                     setDetail(fnRow, 102, "");
                     
