@@ -1,0 +1,1205 @@
+/**
+ * Inventory Waste BASE
+ * @author Michael Torres Cuison
+ * @since 2018.10.10
+ */
+package org.rmj.purchasing.agent;
+
+import com.mysql.jdbc.Connection;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import net.sf.jasperreports.engine.JRException;
+import net.sf.jasperreports.engine.JasperFillManager;
+import net.sf.jasperreports.engine.JasperPrint;
+import net.sf.jasperreports.engine.data.JsonDataSource;
+import net.sf.jasperreports.view.JasperViewer;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.rmj.appdriver.constants.EditMode;
+import org.rmj.appdriver.constants.RecordStatus;
+import org.rmj.appdriver.constants.TransactionStatus;
+import org.rmj.appdriver.GRider;
+import org.rmj.appdriver.iface.GEntity;
+import org.rmj.appdriver.MiscUtil;
+import org.rmj.appdriver.SQLUtil;
+import org.rmj.appdriver.agentfx.CommonUtils;
+import org.rmj.appdriver.agentfx.ShowMessageFX;
+import org.rmj.appdriver.agentfx.ui.showFXDialog;
+import org.rmj.appdriver.constants.UserRight;
+import org.rmj.appdriver.agentfx.callback.IMasterDetail;
+import org.rmj.cas.client.base.XMClient;
+import org.rmj.cas.inventory.base.Inventory;
+import org.rmj.cas.purchasing.pojo.UnitPODetail;
+import org.rmj.cas.purchasing.pojo.UnitPOMaster;
+import org.rmj.cas.purchasing.pojo.UnitPOReceivingDetailOthers;
+import org.rmj.lp.parameter.agent.XMBranch;
+import org.rmj.lp.parameter.agent.XMInventoryType;
+import org.rmj.lp.parameter.agent.XMSupplier;
+import org.rmj.lp.parameter.agent.XMTerm;
+
+public class PurchaseOrders{
+    private final String MODULENAME = "PurchaseOrder";
+    
+    public PurchaseOrders(GRider foGRider, String fsBranchCD, boolean fbWithParent){
+        this.poGRider = foGRider;
+        
+        if (foGRider != null){
+            this.pbWithParent = fbWithParent;
+            this.psBranchCd = fsBranchCD;
+            
+            this.psUserIDxx = foGRider.getUserID();
+            pnEditMode = EditMode.UNKNOWN;
+        }
+    }
+    
+    public boolean BrowseRecord(String fsValue, boolean fbByCode){
+        String lsHeader = "Trans. No»Date";
+        String lsColName = "sTransNox»dTransact";
+        String lsColCrit = "a.sTransNox»a.dTransact";
+        String lsSQL = getSQ_POMaster();
+        JSONObject loJSON;
+        
+        loJSON = showFXDialog.jsonSearch(poGRider, 
+                                            lsSQL, 
+                                            fsValue, 
+                                            lsHeader, 
+                                            lsColName, 
+                                            lsColCrit, 
+                                            fbByCode ? 0 : 1);
+        
+        if(loJSON == null)
+            return false;
+        else
+            return openTransaction((String) loJSON.get("sTransNox"));
+    }
+    
+    public boolean addDetail() {
+        if (paDetail.isEmpty()){
+            paDetail.add(new UnitPODetail());
+            
+            paDetailOthers.add(new UnitPOReceivingDetailOthers());
+        } else{
+            if (!paDetail.get(ItemCount()-1).getStockID().equals("") &&
+                    paDetail.get(ItemCount() -1).getQuantity().doubleValue() != 0.00){
+                paDetail.add(new UnitPODetail());
+                
+                paDetailOthers.add(new UnitPOReceivingDetailOthers());
+            }
+        }
+        return true;
+    }
+
+    public boolean deleteDetail(int fnRow) {
+        paDetail.remove(fnRow);
+        paDetailOthers.remove(fnRow);
+        
+        if (paDetail.isEmpty()){
+            paDetail.add(new UnitPODetail());
+            paDetailOthers.add(new UnitPOReceivingDetailOthers());
+        }
+
+        poData.setTranTotal(computeTotal());
+        return true;
+    }
+    
+    public void setDetail(int fnRow, int fnCol, Object foData) {
+        if (pnEditMode != EditMode.UNKNOWN){
+            // Don't allow specific fields to assign values
+            if(!(fnCol == poDetail.getColumn("sTransNox") ||
+                fnCol == poDetail.getColumn("nEntryNox") ||
+                fnCol == poDetail.getColumn("dModified"))){
+
+                if (fnCol == poDetail.getColumn("nQuantity")){
+                    if (foData instanceof Double){   
+                        
+                        paDetail.get(fnRow).setValue(fnCol, foData);
+                        addDetail();
+//                        if (Double.valueOf(foData.toString()) > Double.valueOf(paDetailOthers.get(fnRow).getValue("nQtyOnHnd").toString())){
+//                            ShowMessageFX.Information("Quantity to deduct is greater than the quantity on hand.", MODULENAME, "Invalid quantity");
+//                        } else {
+//                            paDetail.get(fnRow).setValue(fnCol, foData);
+//                            addDetail();
+//                        }
+                        
+                    }else paDetail.get(fnRow).setValue(fnCol, 0);
+                } else if (fnCol == poDetail.getColumn("nUnitPrce")){
+                    if (foData instanceof Number){
+                        paDetail.get(fnRow).setValue(fnCol, foData);
+                    }else paDetail.get(fnRow).setValue(fnCol, 0.00);
+                    
+                } else if(fnCol == 100){
+                    paDetailOthers.get(fnRow).setValue("xBarCodex", foData);
+                } else if(fnCol == 101){
+                    paDetailOthers.get(fnRow).setValue("xDescript", foData);
+                } else paDetail.get(fnRow).setValue(fnCol, foData);  
+                
+                
+                DetailRetreived(fnCol);
+                if (fnCol == Integer.parseInt(String.valueOf(paDetail.get(fnRow).getColumn("nQuantity"))) ||
+                     fnCol == Integer.parseInt(String.valueOf(paDetail.get(fnRow).getColumn("nUnitPrce")))){
+                    poData.setTranTotal(computeTotal());
+                    MasterRetreived(9);
+                }  
+            }
+             
+        }
+    }
+
+    public void setDetail(int fnRow, String fsCol, Object foData) {
+        setDetail(fnRow, poDetail.getColumn(fsCol), foData);
+    }
+    
+    public Object getDetail(int fnRow, int fnCol) {
+        if(pnEditMode == EditMode.UNKNOWN)
+            return null;
+        else{
+            return paDetail.get(fnRow).getValue(fnCol);
+      }
+    }
+
+    public Object getDetail(int fnRow, String fsCol) {
+        return getDetail(fnRow, poDetail.getColumn(fsCol));
+    }
+    
+    public Object getDetailOthers(int fnRow, String fsCol){
+        switch(fsCol){
+            case "sStockIDx":
+            case "xBarCodex":
+            case "xDescript":
+            case "xQtyOnHnd":
+            case "sMeasurNm":
+                return paDetailOthers.get(fnRow).getValue(fsCol);
+            default:
+                return null;
+        }
+    }
+
+    public boolean newTransaction() {
+        Connection loConn = null;
+        loConn = setConnection();
+        
+        poData = new UnitPOMaster();
+        poData.setTransNox(MiscUtil.getNextCode(poData.getTable(), "sTransNox", true, loConn, psBranchCd));
+        poData.setDateTransact(poGRider.getServerDate());
+        
+        //init detail
+        paDetail = new ArrayList<>();      
+        paDetailOthers = new ArrayList<>(); //detail other info storage
+        
+        pnEditMode = EditMode.ADDNEW;
+        
+        addDetail();
+        return true;
+    }
+    
+    public boolean openTransaction(String fsTransNox){
+        poData = loadTransaction(fsTransNox);
+        
+        if (poData != null) 
+            paDetail = loadTransactionDetail(fsTransNox);
+        else{
+            setMessage("Unable to load transaction.");
+            return false;
+        } 
+            
+        pnEditMode = EditMode.READY;
+        return true;
+    }
+
+    public UnitPOMaster loadTransaction(String fsTransNox) {
+        UnitPOMaster loObject = new UnitPOMaster();
+        
+        Connection loConn = null;
+        loConn = setConnection();   
+        
+        String lsSQL = MiscUtil.addCondition(getSQ_Master(), "sTransNox = " + SQLUtil.toSQL(fsTransNox));
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        
+        try {
+            if (!loRS.next()){
+                setMessage("No Record Found");
+            }else{
+                //load each column to the entity
+                for(int lnCol=1; lnCol<=loRS.getMetaData().getColumnCount(); lnCol++){
+                    loObject.setValue(lnCol, loRS.getObject(lnCol));
+                }
+            }              
+        } catch (SQLException ex) {
+            setErrMsg(ex.getMessage());
+        } finally{
+            MiscUtil.close(loRS);
+            if (!pbWithParent) MiscUtil.close(loConn);
+        }
+        
+        return loObject;
+    }
+    
+    public ResultSet getExpiration(String fsStockIDx){
+        String lsSQL = "SELECT * FROM Inv_Master_Expiration" +
+                        " WHERE sStockIDx = " + SQLUtil.toSQL(fsStockIDx) +
+                            " AND sBranchCd = " + SQLUtil.toSQL(psBranchCd) +
+                            " AND nQtyOnHnd > 0" +
+                        " ORDER BY dExpiryDt";     
+        
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        
+        return loRS;
+    }
+    
+    private ArrayList<UnitPODetail> loadTransactionDetail(String fsTransNox){
+        UnitPODetail loOcc = null;
+        UnitPOReceivingDetailOthers loOth = null;
+        Connection loConn = null;
+        loConn = setConnection();
+        
+        ArrayList<UnitPODetail> loDetail = new ArrayList<>();
+        paDetailOthers = new ArrayList<>(); //reset detail others
+        
+        ResultSet loRS = poGRider.executeQuery(
+                            MiscUtil.addCondition(getSQ_Detail(), 
+                                                    "sTransNox = " + SQLUtil.toSQL(fsTransNox)));
+        try {
+            for (int lnCtr = 1; lnCtr <= MiscUtil.RecordCount(loRS); lnCtr ++){
+                loRS.absolute(lnCtr);
+
+                loOcc = new UnitPODetail();
+                loOcc.setValue("sTransNox", loRS.getString("sTransNox"));
+                loOcc.setValue("nEntryNox", loRS.getInt("nEntryNox"));
+                loOcc.setValue("sStockIDx", loRS.getString("sStockIDx"));
+                loOcc.setValue("nQuantity", loRS.getDouble("nQuantity"));
+                loOcc.setValue("nUnitPrce", loRS.getDouble("nUnitPrce"));
+                loOcc.setValue("nReceived", loRS.getDouble("nReceived"));
+                loOcc.setValue("nCancelld", loRS.getDouble("nCancelld"));
+                loOcc.setValue("dModified", loRS.getDate("dModified"));
+                loOcc.setValue("nQtyOnHnd", loRS.getDouble("nQtyOnHnd"));
+                loOcc.setValue("sBrandNme", loRS.getString("sBrandNme"));
+                loDetail.add(loOcc);
+                
+                loOth = new UnitPOReceivingDetailOthers();
+                loOth.setValue("sStockIDx", loRS.getString("sStockIDx"));
+                loOth.setValue("sBarCodex", loRS.getString("sBarCodex"));
+                loOth.setValue("sDescript", loRS.getString("sDescript"));
+                loOth.setValue("xQtyOnHnd", loRS.getDouble("nQtyOnHnd"));
+                loOth.setValue("nQtyOnHnd", loRS.getDouble("nQtyOnHnd"));
+                if (loRS.getString("sMeasurNm")!=null){
+                   loOth.setValue("sMeasurNm", loRS.getString("sMeasurNm"));
+                }else{
+                   loOth.setValue("sMeasurNm", "");
+                }
+                paDetailOthers.add(loOth);
+            }
+        } catch (SQLException e) {
+            //log error message
+            return null;
+        }        
+        
+        return loDetail;
+    }
+    
+    public boolean updateRecord() {
+        if(pnEditMode != EditMode.READY) {
+         return false;
+      }
+      else{
+         pnEditMode = EditMode.UPDATE;
+         return true;
+      }
+    }
+
+    private double computeTotal(){
+        double lnTranTotal = 0;
+        for (int lnCtr = 0; lnCtr <= ItemCount()-1; lnCtr ++){
+            lnTranTotal += Double.valueOf(String.valueOf(getDetail(lnCtr, "nQuantity"))) * Double.valueOf(String.valueOf(getDetail(lnCtr, "nUnitPrce")));
+        }
+        
+        return lnTranTotal;
+    }
+    public boolean saveTransaction() {
+        String lsSQL = "";
+        boolean lbUpdate = false;
+        
+        UnitPOMaster loOldEnt = null;
+        UnitPOMaster loNewEnt = null;
+        UnitPOMaster loResult = null;
+        
+        // Check for the value of foEntity
+        if (!(poData instanceof UnitPOMaster)) {
+            setErrMsg("Invalid Entity Passed as Parameter");
+            return false;
+        }
+        
+        // Typecast the Entity to this object
+        loNewEnt = (UnitPOMaster) poData;        
+          
+        loNewEnt.setTranTotal(computeTotal());     
+        if (!pbWithParent) poGRider.beginTrans();
+        
+        //delete empty detail
+        if (paDetail.get(ItemCount()-1).getStockID().equals("")) deleteDetail(ItemCount()-1);
+        
+        // Generate the SQL Statement
+        if (pnEditMode == EditMode.ADDNEW){
+            Connection loConn = null;
+            loConn = setConnection();
+
+            String lsTransNox = MiscUtil.getNextCode(loNewEnt.getTable(), "sTransNox", true, loConn, psBranchCd);
+
+            loNewEnt.setTransNox(lsTransNox);
+            loNewEnt.setEntryNox(ItemCount());
+            loNewEnt.setModifiedBy(poGRider.getUserID());
+            loNewEnt.setDateModified(poGRider.getServerDate());
+
+            if (!pbWithParent) MiscUtil.close(loConn);
+
+            lbUpdate = saveDetail(loNewEnt.getTransNox());
+            if (!lbUpdate) lsSQL = "";
+            else lsSQL = MiscUtil.makeSQL((GEntity) loNewEnt);
+        }else{
+            //Load previous transaction
+            loOldEnt = loadTransaction(poData.getTransNox());
+
+            loNewEnt.setEntryNox(ItemCount());
+            loNewEnt.setDateModified(poGRider.getServerDate());
+
+            lbUpdate = saveDetail(loNewEnt.getTransNox());
+            if (!lbUpdate) lsSQL = "";            
+            else lsSQL = MiscUtil.makeSQL((GEntity) loNewEnt, (GEntity) loOldEnt, "sTransNox = " + SQLUtil.toSQL(loNewEnt.getValue(1)));
+        }
+                
+        if (!lsSQL.equals("") && getErrMsg().isEmpty()){
+            if(poGRider.executeQuery(lsSQL, loNewEnt.getTable(), "", "") == 0){
+                if(!poGRider.getErrMsg().isEmpty())
+                    setErrMsg(poGRider.getErrMsg());
+                else 
+                    setMessage("No record updated");
+            } 
+            lbUpdate = true;
+        }
+        
+        if (!pbWithParent) {
+            if (!getErrMsg().isEmpty()){
+                poGRider.rollbackTrans();
+            } else poGRider.commitTrans();
+        }        
+        
+        return lbUpdate;
+    }
+    
+    private boolean saveDetail(String fsTransNox){
+        setMessage("");
+        if (paDetail.isEmpty()){
+            setMessage("Unable to save empty detail transaction.");
+            return false;
+        } 
+        else if (paDetail.get(0).getStockID().equals("") ||
+                paDetail.get(0).getQuantity().doubleValue() == 0.00){
+            setMessage("Detail might not have item or zero quantity.");
+            return false;
+        }
+        
+        int lnCtr;
+        String lsSQL;
+        UnitPODetail loNewEnt = null;
+        
+        if (pnEditMode == EditMode.ADDNEW){
+            Connection loConn = null;
+            loConn = setConnection();  
+            
+            for (lnCtr = 0; lnCtr <= paDetail.size() -1; lnCtr++){
+                loNewEnt = paDetail.get(lnCtr);
+                
+                if (!loNewEnt.getStockID().equals("")){
+                    loNewEnt.setTransNox(fsTransNox);
+                    loNewEnt.setEntryNox(lnCtr + 1);
+                    loNewEnt.setDateModified(poGRider.getServerDate());
+
+                    lsSQL = MiscUtil.makeSQL((GEntity) loNewEnt, "nQtyOnHnd;sBrandNme");
+
+                    if (!lsSQL.equals("")){
+                        if(poGRider.executeQuery(lsSQL, loNewEnt.getTable(), "", "") == 0){
+                            if(!poGRider.getErrMsg().isEmpty()){
+                                setErrMsg(poGRider.getErrMsg());
+                                return false;
+                            }
+                        } 
+                    }
+                }
+            }
+        } else{
+            ArrayList<UnitPODetail> laSubUnit = loadTransactionDetail(poData.getTransNox());
+            
+            for (lnCtr = 0; lnCtr <= paDetail.size()-1; lnCtr++){
+                loNewEnt = paDetail.get(lnCtr);
+                
+                if (!loNewEnt.getStockID().equals("")){
+                    if (lnCtr <= laSubUnit.size()-1){
+                        if (loNewEnt.getEntryNox() != lnCtr+1) loNewEnt.setEntryNox(lnCtr+1);
+                        
+                        lsSQL = MiscUtil.makeSQL((GEntity) loNewEnt, 
+                                                (GEntity) laSubUnit.get(lnCtr), 
+                                                " nEntryNox = " + SQLUtil.toSQL(loNewEnt.getValue(2)) + 
+                                                " AND sTransNox = " + SQLUtil.toSQL(loNewEnt.getValue(1)),
+                                                "nQtyOnHnd;sBrandNme");
+
+                    } else{
+                        loNewEnt.setStockID(fsTransNox);
+                        loNewEnt.setEntryNox(lnCtr + 1);
+                        loNewEnt.setDateModified(poGRider.getServerDate());
+                        lsSQL = MiscUtil.makeSQL((GEntity) loNewEnt,"nQtyOnHnd;sBrandNme");
+                    }
+                    
+                    if (!lsSQL.equals("")){
+                        if(poGRider.executeQuery(lsSQL, loNewEnt.getTable(), "", "") == 0){
+                            if(!poGRider.getErrMsg().isEmpty()){
+                                setErrMsg(poGRider.getErrMsg());
+                                return false;
+                            }
+                        } 
+                    }
+                } else{
+                    for(int lnCtr2 = lnCtr; lnCtr2 <= laSubUnit.size()-1; lnCtr2++){
+                        lsSQL = "DELETE FROM " + poDetail.getTable()+
+                                " WHERE sStockIDx = " + SQLUtil.toSQL(laSubUnit.get(lnCtr2).getStockID()) +
+                                    " AND nEntryNox = " + SQLUtil.toSQL(laSubUnit.get(lnCtr2).getEntryNox());
+
+                        if (!lsSQL.equals("")){
+                            if(poGRider.executeQuery(lsSQL, poDetail.getTable(), "", "") == 0){
+                                if(!poGRider.getErrMsg().isEmpty()){
+                                    setErrMsg(poGRider.getErrMsg());
+                                    return false;
+                                }
+                            } 
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    public boolean deleteTransaction(String string) {
+        UnitPOMaster loObject = loadTransaction(string);
+        boolean lbResult = false;
+        
+        if (loObject == null){
+            setMessage("No record found...");
+            return lbResult;
+        }
+        
+        String lsSQL = "DELETE FROM " + loObject.getTable() + 
+                        " WHERE sTransNox = " + SQLUtil.toSQL(string);
+        
+        if (!pbWithParent) poGRider.beginTrans();
+        
+        if (poGRider.executeQuery(lsSQL, loObject.getTable(), "", "") == 0){
+            if (!poGRider.getErrMsg().isEmpty()){
+                setErrMsg(poGRider.getErrMsg());
+            } else setErrMsg("No record deleted.");  
+        } else lbResult = true;
+        
+        //delete detail rows
+        lsSQL = "DELETE FROM " + poDetail.getTable() +
+                " WHERE sTransNox = " + SQLUtil.toSQL(string);
+        
+        if (poGRider.executeQuery(lsSQL, poDetail.getTable(), "", "") == 0){
+            if (!poGRider.getErrMsg().isEmpty()){
+                setErrMsg(poGRider.getErrMsg());
+            } else setErrMsg("No record deleted.");  
+        } else lbResult = true;
+        
+        if (!pbWithParent){
+            if (getErrMsg().isEmpty()){
+                poGRider.commitTrans();
+            } else poGRider.rollbackTrans();
+        }
+        
+        return lbResult;
+    }
+    public boolean closeTransaction(String fsTransNox, String fsUserIDxx, String fsAprvCode) {
+        UnitPOMaster loObject = loadTransaction(fsTransNox);
+        boolean lbResult = false;
+        if(pnEditMode != EditMode.READY){
+            return false;
+        } else{
+            if (loObject == null){
+                setMessage("No record found...");
+                return lbResult;
+            }
+        
+            if (fsAprvCode == null || fsAprvCode.isEmpty()){
+                setMessage("Invalid/No approval code detected.");
+                return lbResult;
+            }
+
+            if (!loObject.getTranStat().equalsIgnoreCase(TransactionStatus.STATE_OPEN)){
+                setMessage("Unable to close closed/cancelled/posted/voided transaction.");
+                return lbResult;
+            }
+
+            if (poGRider.getUserLevel() < UserRight.SUPERVISOR){
+                setMessage("User is not allowed confirming transaction.");
+                return lbResult;
+            }
+
+            String lsSQL = "UPDATE " + loObject.getTable() + 
+                            " SET  cTranStat = " + SQLUtil.toSQL(TransactionStatus.STATE_CLOSED) + 
+                                ", sApproved = " + SQLUtil.toSQL(fsUserIDxx) +
+                                ", dApproved = " + SQLUtil.toSQL(poGRider.getServerDate()) + 
+                                ", sAprvCode = " + SQLUtil.toSQL(fsAprvCode) +
+                                ", sModified = " + SQLUtil.toSQL(psUserIDxx) +
+                                ", dModified = " + SQLUtil.toSQL(poGRider.getServerDate()) + 
+                            " WHERE sTransNox = " + SQLUtil.toSQL(loObject.getTransNox());
+
+            if (!pbWithParent) poGRider.beginTrans();
+
+            if (poGRider.executeQuery(lsSQL, loObject.getTable(), "", "") == 0){
+                if (!poGRider.getErrMsg().isEmpty()){
+                    setErrMsg(poGRider.getErrMsg());
+                } else setErrMsg("No record deleted.");  
+            } else lbResult = true;
+
+            if (!pbWithParent){
+                if (getErrMsg().isEmpty()){
+                    poGRider.commitTrans();
+                } else poGRider.rollbackTrans();
+            }
+        }
+        
+        
+        return lbResult;
+    }
+
+    public boolean postTransaction(String string) {
+        if (poGRider.getUserLevel() <= UserRight.ENCODER){
+            JSONObject loJSON = showFXDialog.getApproval(poGRider);
+            
+            if (loJSON == null){
+                ShowMessageFX.Warning("Approval failed.", pxeModuleName, "Unable to post transaction");
+            }
+            
+            if ((int) loJSON.get("nUserLevl") <= UserRight.ENCODER){
+                ShowMessageFX.Warning("User account has no right to approve.", pxeModuleName, "Unable to post transaction");
+                return false;
+            }
+        }
+        
+        UnitPOMaster loObject = loadTransaction(string);
+        boolean lbResult = false;
+        
+        if (loObject == null){
+            setMessage("No record found...");
+            return lbResult;
+        }
+        
+        if (loObject.getTranStat().equalsIgnoreCase(TransactionStatus.STATE_POSTED) ||
+                loObject.getTranStat().equalsIgnoreCase(TransactionStatus.STATE_CANCELLED) ||
+                loObject.getTranStat().equalsIgnoreCase(TransactionStatus.STATE_VOID)){
+            setMessage("Unable to close proccesed transaction.");
+            return lbResult;
+        }
+        
+        String lsSQL = "UPDATE " + loObject.getTable() + 
+                        " SET  cTranStat = " + SQLUtil.toSQL(TransactionStatus.STATE_POSTED) + 
+                            ", sModified = " + SQLUtil.toSQL(psUserIDxx) +
+                            ", dModified = " + SQLUtil.toSQL(poGRider.getServerDate()) + 
+                        " WHERE sTransNox = " + SQLUtil.toSQL(loObject.getTransNox());
+        
+        if (!pbWithParent) poGRider.beginTrans();
+        
+        if (poGRider.executeQuery(lsSQL, loObject.getTable(), "", "") == 0){
+            if (!poGRider.getErrMsg().isEmpty()){
+                setErrMsg(poGRider.getErrMsg());
+            } else setErrMsg("No record deleted.");  
+        } else lbResult = true;
+        
+        if (!pbWithParent){
+            if (getErrMsg().isEmpty()){
+                poGRider.commitTrans();
+            } else poGRider.rollbackTrans();
+        }
+        return lbResult;
+    }
+
+    public boolean voidTransaction(String string) {
+        UnitPOMaster loObject = loadTransaction(string);
+        boolean lbResult = false;
+        
+        if (loObject == null){
+            setMessage("No record found...");
+            return lbResult;
+        }
+        
+        if (loObject.getTranStat().equalsIgnoreCase(TransactionStatus.STATE_POSTED) ||
+                loObject.getTranStat().equalsIgnoreCase(TransactionStatus.STATE_CANCELLED) ||
+                loObject.getTranStat().equalsIgnoreCase(TransactionStatus.STATE_VOID)){
+            setMessage("Unable to close processed transaction.");
+            return lbResult;
+        }
+        
+        String lsSQL = "UPDATE " + loObject.getTable() + 
+                        " SET  cTranStat = " + SQLUtil.toSQL(TransactionStatus.STATE_VOID) + 
+                            ", sModified = " + SQLUtil.toSQL(psUserIDxx) +
+                            ", dModified = " + SQLUtil.toSQL(poGRider.getServerDate()) + 
+                        " WHERE sTransNox = " + SQLUtil.toSQL(loObject.getTransNox());
+        
+        if (!pbWithParent) poGRider.beginTrans();
+        
+        if (poGRider.executeQuery(lsSQL, loObject.getTable(), "", "") == 0){
+            if (!poGRider.getErrMsg().isEmpty()){
+                setErrMsg(poGRider.getErrMsg());
+            } else setErrMsg("No record deleted.");  
+        } else lbResult = true;
+        
+        if (!pbWithParent){
+            if (getErrMsg().isEmpty()){
+                poGRider.commitTrans();
+            } else poGRider.rollbackTrans();
+        }
+        return lbResult;
+    }
+
+    public boolean cancelTransaction(String string) {
+        UnitPOMaster loObject = loadTransaction(string);
+        boolean lbResult = false;
+        
+        if (loObject == null){
+            setMessage("No record found...");
+            return lbResult;
+        }
+        
+        if (loObject.getTranStat().equalsIgnoreCase(TransactionStatus.STATE_POSTED) ||
+                loObject.getTranStat().equalsIgnoreCase(TransactionStatus.STATE_CANCELLED) ||
+                loObject.getTranStat().equalsIgnoreCase(TransactionStatus.STATE_VOID)){
+            setMessage("Unable to close processed transaction.");
+            return lbResult;
+        }
+        
+        String lsSQL = "UPDATE " + loObject.getTable() + 
+                        " SET  cTranStat = " + SQLUtil.toSQL(TransactionStatus.STATE_CANCELLED) + 
+                            ", sModified = " + SQLUtil.toSQL(psUserIDxx) +
+                            ", dModified = " + SQLUtil.toSQL(poGRider.getServerDate()) + 
+                        " WHERE sTransNox = " + SQLUtil.toSQL(loObject.getTransNox());
+        
+        if (!pbWithParent) poGRider.beginTrans();
+        
+        if (poGRider.executeQuery(lsSQL, loObject.getTable(), "", "") == 0){
+            if (!poGRider.getErrMsg().isEmpty()){
+                setErrMsg(poGRider.getErrMsg());
+            } else setErrMsg("No record deleted.");  
+        } else lbResult = true;
+        
+        if (!pbWithParent){
+            if (getErrMsg().isEmpty()){
+                poGRider.commitTrans();
+            } else poGRider.rollbackTrans();
+        }
+        return lbResult;
+    }
+    
+    public boolean SearchDetail(int fnRow, int fnCol, String fsValue, boolean fbSearch, boolean fbByCode){
+        String lsHeader = "";
+        String lsColName = "";
+        String lsColCrit = "";
+        String lsSQL = "";
+        JSONObject loJSON;
+        
+        setErrMsg("");
+        setMessage("");
+        
+        switch(fnCol){
+            
+            case 3:
+                
+                lsSQL = MiscUtil.addCondition(getSQ_Stocks(), "a.cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
+                lsHeader = "Barcode»Description»Brand»Unit»Qty. on hand»Inv. Type";
+                lsColName = "sBarCodex»sDescript»xBrandNme»sMeasurNm»nQtyOnHnd»xInvTypNm";
+                lsColCrit = "a.sBarCodex»a.sDescript»b.sDescript»f.sMeasurNm»e.nQtyOnHnd»d.sDescript";    
+                 loJSON = showFXDialog.jsonSearch(poGRider, 
+                                                        lsSQL, 
+                                                        fsValue, 
+                                                        lsHeader, 
+                                                        lsColName, 
+                                                        lsColCrit, 
+                                                        fbSearch ? 2 : 1);
+                
+                if (loJSON != null){
+                    setDetail(fnRow, fnCol, (String) loJSON.get("sStockIDx"));
+                    setDetail(fnRow, "nUnitPrce", Double.valueOf((String) loJSON.get("nUnitPrce")));
+                    setDetail(fnRow, "nQtyOnHnd", Double.valueOf((String) loJSON.get("nQtyOnHnd")));
+                    setDetail(fnRow, "sBrandNme", (String) loJSON.get("xBrandNme"));
+                    
+                    paDetailOthers.get(fnRow).setValue("sStockIDx", (String) loJSON.get("sStockIDx"));
+                    paDetailOthers.get(fnRow).setValue("xBarCodex", (String) loJSON.get("sBarCodex"));
+                    paDetailOthers.get(fnRow).setValue("xDescript", (String) loJSON.get("sDescript"));
+                    paDetailOthers.get(fnRow).setValue("xQtyOnHnd", Double.valueOf((String) loJSON.get("nQtyOnHnd")));
+                    paDetailOthers.get(fnRow).setValue("nQtyOnHnd", Double.valueOf((String) loJSON.get("nQtyOnHnd")));
+                    paDetailOthers.get(fnRow).setValue("sMeasurNm", (String) loJSON.get("sMeasurNm"));
+                    
+                    return true;
+                } else{
+                    setDetail(fnRow, fnCol, "");
+                    setDetail(fnRow, "sBrandNme", "");
+                    setDetail(fnRow, "nUnitPrce", 0);
+                    setDetail(fnRow, "nQtyOnHnd", 0);
+                    
+                    paDetailOthers.get(fnRow).setValue("sStockIDx", "");
+                    paDetailOthers.get(fnRow).setValue("xBarCodex", "");
+                    paDetailOthers.get(fnRow).setValue("xDescript", "");
+                    paDetailOthers.get(fnRow).setValue("xQtyOnHnd", 0);
+                    paDetailOthers.get(fnRow).setValue("nQtyOnHnd", 0);
+                    paDetailOthers.get(fnRow).setValue("sMeasurNm", "");
+                    return false;
+                }
+            default:
+                return false;
+        }
+    }
+    
+    public boolean SearchDetail(int fnRow, String fsCol, String fsValue, boolean fbSearch, boolean fbByCode){
+        return SearchDetail(fnRow, poDetail.getColumn(fsCol), fsValue, fbSearch, fbByCode);
+    }
+    public void setMaster(int fnCol, Object foData) {
+        if (pnEditMode != EditMode.UNKNOWN){
+            // Don't allow specific fields to assign values
+            if(!(fnCol == poData.getColumn("sTransNox") ||
+                fnCol == poData.getColumn("nEntryNox") ||
+                fnCol == poData.getColumn("cTranStat") ||
+                fnCol == poData.getColumn("sModified") ||
+                fnCol == poData.getColumn("dModified"))){
+                
+                poData.setValue(fnCol, foData);   
+                MasterRetreived(fnCol);
+            }
+        }
+    }
+
+    public void setMaster(String fsCol, Object foData) {
+        setMaster(poData.getColumn(fsCol), foData);
+    }
+
+    public Object getMaster(int fnCol) {
+        if(pnEditMode == EditMode.UNKNOWN)
+            return null;
+        else{
+            return poData.getValue(fnCol);
+      }
+    }
+
+    public Object getMaster(String fsCol) {
+        return getMaster(poData.getColumn(fsCol));
+    }
+
+    public String getMessage() {
+        return psWarnMsg;
+    }
+
+    public void setMessage(String string) {
+        psWarnMsg = string;
+    }
+
+    public String getErrMsg() {
+        return psErrMsgx;
+    }
+
+    public void setErrMsg(String string) {
+        psErrMsgx = string;
+    }
+
+    public void setBranch(String string) {
+        psBranchCd = string;
+    }
+
+    public void setWithParent(boolean bln) {
+        pbWithParent = bln;
+    }
+
+    public String getSQ_Master() {
+        return MiscUtil.makeSelect(new UnitPOMaster());
+    }
+    
+   private String getSQ_Detail(){
+        return "SELECT" +
+                    "  a.sTransNox" +
+                    ", a.nEntryNox" + 
+                    ", a.sStockIDx" + 
+                    ", a.nQuantity" + 
+                    ", a.nUnitPrce" + 
+                    ", a.nReceived" + 
+                    ", a.nCancelld" + 
+                    ", a.dModified" + 
+                    ", c.sBarCodex" +
+                    ", c.sDescript" +
+                    ", b.nQtyOnHnd nQtyOnHnd" +
+                    ", d.sMeasurNm" +
+                    ", e.sDescript sBrandNme" +
+                " FROM PO_Detail a" +
+                    ", Inv_Master b" +
+                        " LEFT JOIN Inventory c" +
+                            " ON b.sStockIDx = c.sStockIDx" +
+                        " LEFT JOIN Brand e" + 
+                            " ON c.sBrandCde = e.sBrandCde" +
+                        " LEFT JOIN Measure d" +
+                            " ON c.sMeasurID = d.sMeasurID" +
+                " WHERE a.sStockIDx = b.sStockIDx" +
+                    " AND b.sBranchCD = " + SQLUtil.toSQL(poGRider.getBranchCode());
+    }
+    
+    public int ItemCount(){
+        return paDetail.size();
+    }
+    
+    private Connection setConnection(){
+        Connection foConn;
+        
+        if (pbWithParent){
+            foConn = (Connection) poGRider.getConnection();
+            if (foConn == null) foConn = (Connection) poGRider.doConnect();
+        }else foConn = (Connection) poGRider.doConnect();
+        
+        return foConn;
+    }
+    
+    public int getEditMode(){return pnEditMode;}
+    
+    private String getSQ_POMaster(){
+        String lsTranStat = String.valueOf(pnTranStat);
+        String lsCondition = "";
+        String lsSQL =  "SELECT" +
+                    "  sTransNox" +
+                    ", sBranchCd" +
+                    ", dTransact" +
+                    ", sCompnyID" +
+                    ", sDestinat" +
+                    ", sSupplier" +
+                    ", sReferNox" +
+                    ", sTermCode" +
+                    ", nTranTotl" +
+                    ", sRemarksx" +
+                    ", sSourceNo" +
+                    ", sSourceCd" +
+                    ", cEmailSnt" +
+                    ", nEmailSnt" +
+                    ", nEntryNox" +
+                    ", sInvTypCd" +
+                    ", cTranStat" +
+                    ", sPrepared" +
+                    ", dPrepared" +
+                    ", sApproved" +
+                    ", dApproved" +
+                    ", sAprvCode" +
+                    ", sPostedxx" +
+                    ", dPostedxx" +
+                    ", sModified" +
+                    ", dModified" +
+                        " FROM PO_Master a" + 
+                        " WHERE sTransNox LIKE " + SQLUtil.toSQL(psBranchCd + "%");
+        
+        if (lsTranStat.length() == 1) {
+            lsCondition = "cTranStat = " + SQLUtil.toSQL(lsTranStat);
+        } else {
+            for (int lnCtr = 0; lnCtr <= lsTranStat.length() -1; lnCtr++){
+                lsCondition = lsCondition + SQLUtil.toSQL(String.valueOf(lsTranStat.charAt(lnCtr))) + ",";
+            }
+            lsCondition = "(" + lsCondition.substring(0, lsCondition.length()-1) + ")";
+            lsCondition = "cTranStat IN " + lsCondition;
+        }
+        
+        lsSQL = MiscUtil.addCondition(lsSQL, lsCondition);
+        return lsSQL;
+    }
+    
+    private String getSQ_Stocks(){
+       String lsSQL =  "SELECT " +
+                    "  a.sStockIDx" +
+                    ", a.sBarCodex" + 
+                    ", a.sDescript" + 
+                    ", a.sBriefDsc" + 
+                    ", a.sAltBarCd" + 
+                    ", a.sCategCd1" + 
+                    ", a.sCategCd2" + 
+                    ", a.sCategCd3" + 
+                    ", a.sCategCd4" + 
+                    ", a.sBrandCde" + 
+                    ", a.sModelCde" + 
+                    ", a.sColorCde" + 
+                    ", a.sInvTypCd" + 
+                    ", a.nUnitPrce" + 
+                    ", a.nSelPrice" + 
+                    ", a.nDiscLev1" + 
+                    ", a.nDiscLev2" + 
+                    ", a.nDiscLev3" + 
+                    ", a.nDealrDsc" + 
+                    ", a.cComboInv" + 
+                    ", a.cWthPromo" + 
+                    ", a.cSerialze" + 
+                    ", a.cUnitType" + 
+                    ", a.cInvStatx" + 
+                    ", a.sSupersed" + 
+                    ", a.cRecdStat" + 
+                    ", b.sDescript xBrandNme" + 
+                    ", c.sDescript xModelNme" + 
+                    ", d.sDescript xInvTypNm" + 
+                    ", f.sMeasurNm" +
+                    ", IFNULL(e.nQtyOnHnd,0) nQtyOnHnd" +
+                " FROM Inventory a" + 
+                        " LEFT JOIN Brand b" + 
+                            " ON a.sBrandCde = b.sBrandCde" + 
+                        " LEFT JOIN Model c" + 
+                            " ON a.sModelCde = c.sModelCde" + 
+                        " LEFT JOIN Inv_Type d" + 
+                            " ON a.sInvTypCd = d.sInvTypCd" + 
+                        " LEFT JOIN Measure f" +
+                            " ON a.sMeasurID = f.sMeasurID" +
+                    ", Inv_Master e" + 
+                " WHERE a.sStockIDx = e.sStockIDx" + 
+                    " AND e.sBranchCd = " + SQLUtil.toSQL(psBranchCd);
+        if (!System.getProperty("store.inventory.type").isEmpty())
+            lsSQL = MiscUtil.addCondition(lsSQL, "a.sInvTypCd IN " + CommonUtils.getParameter(System.getProperty("store.inventory.type")));
+        
+        return lsSQL;
+    }
+    
+    public void printColumnsMaster(){poData.list();}
+    public void printColumnsDetail(){poDetail.list();}
+    public void setTranStat(int fnValue){this.pnTranStat = fnValue;}
+    
+    //callback methods
+    public void setCallBack(IMasterDetail foCallBack){
+        poCallBack = foCallBack;
+    }
+    
+    private void MasterRetreived(int fnRow){
+        if (poCallBack == null) return;
+        
+        poCallBack.MasterRetreive(fnRow);
+    }
+    
+    private void DetailRetreived(int fnRow){
+        if (poCallBack == null) return;
+        
+        poCallBack.DetailRetreive(fnRow);
+    }
+    
+    public void setClientNm(String fsClientNm){
+        this.psClientNm = fsClientNm;
+    }
+    
+    
+    public Inventory GetInventory(String fsValue, boolean fbByCode, boolean fbSearch){        
+        Inventory instance = new Inventory(poGRider, psBranchCd, fbSearch);
+        instance.BrowseRecord(fsValue, fbByCode, false);
+        return instance;
+    }
+    
+    public XMTerm GetTerm(String fsValue, boolean fbByCode){
+        if (fbByCode && fsValue.equals("")) return null;
+        
+        XMTerm instance  = new XMTerm(poGRider, psBranchCd, true);
+        if (instance.browseRecord(fsValue, fbByCode))
+            return instance;
+        else
+            return null;
+    }
+    
+    public XMBranch GetBranch(String fsValue, boolean fbByCode){
+        if (fbByCode && fsValue.equals("")) return null;
+        
+        XMBranch instance  = new XMBranch(poGRider, psBranchCd, true);
+        if (instance.browseRecord(fsValue, fbByCode))
+            return instance;
+        else
+            return null;
+    }
+    
+    public JSONObject GetSupplier(String fsValue, boolean fbByCode){
+        if (fbByCode && fsValue.equals("")) return null;
+        
+        XMClient instance  = new XMClient(poGRider, psBranchCd, true);
+        return instance.SearchClient(fsValue, fbByCode);
+    }
+    
+    public XMInventoryType GetInventoryType(String fsValue, boolean fbByCode){
+        if (fbByCode && fsValue.equals("")) return null;
+        
+        XMInventoryType instance  = new XMInventoryType(poGRider, psBranchCd, true);
+        if (instance.browseRecord(fsValue, fbByCode))
+            return instance;
+        else
+            return null;
+    }
+    
+    public boolean SearchMaster(int fnCol, String fsValue, boolean fbByCode){
+        switch(fnCol){
+            case 2: //sBranchCd
+                XMBranch loBranch = new XMBranch(poGRider, psBranchCd, true);
+                if (loBranch.browseRecord(fsValue, fbByCode)){
+                    setMaster(fnCol, loBranch.getMaster("sBranchCd"));
+                    setMaster("sCompnyID", loBranch.getMaster("sCompnyID"));
+                    MasterRetreived(fnCol);
+                    return true;
+                }
+                break;
+            case 5: //sDestinat
+                XMBranch loDest = new XMBranch(poGRider, psBranchCd, true);
+                if (loDest.browseRecord(fsValue, fbByCode)){
+                    setMaster(fnCol, loDest.getMaster("sBranchCd"));
+                    MasterRetreived(fnCol);
+                    return true;
+                }
+                break;
+            case 6: //sSupplier
+                XMSupplier loSupplier = new XMSupplier(poGRider, psBranchCd, true);
+                if (loSupplier.browseRecord(fsValue, psBranchCd, fbByCode)){
+                    setMaster(fnCol, loSupplier.getMaster("sClientID"));
+                    MasterRetreived(fnCol);
+                    return true;
+                }
+                break;
+            case 8: //sTermCode               
+                XMTerm loTerm = new XMTerm(poGRider, psBranchCd, true);
+                if (loTerm.browseRecord(fsValue, fbByCode)){
+                    setMaster(fnCol, loTerm.getMaster("sTermCode"));
+                    MasterRetreived(fnCol);
+                    return true;
+                }
+                break;
+            case 16: //sInvTypCd
+                XMInventoryType loInv = new XMInventoryType(poGRider, psBranchCd, true);
+                if (loInv.browseRecord(fsValue, fbByCode)){
+                setMaster(fnCol, loInv.getMaster("sInvTypCd"));
+                    MasterRetreived(fnCol);
+                    return true;
+                }
+                break;
+        }
+        
+        return false;
+    }
+    
+    public boolean SearchMaster(String fsCol, String fsValue, boolean fbByCode){
+        return SearchMaster(poData.getColumn(fsCol), fsValue, fbByCode);
+    }
+    
+    public boolean printRecord(){
+        if (poData == null){
+            ShowMessageFX.Warning("Unable to print transaction.", "Warning", "No record loaded.");
+            return false;
+        }
+        
+        //Create the parameter
+        Map<String, Object> params = new HashMap<>();
+        params.put("sCompnyNm", "Guanzon Group");
+        params.put("sBranchNm", poGRider.getBranchName());
+        params.put("sAddressx", poGRider.getAddress() + ", " + poGRider.getTownName() + " " +poGRider.getProvince());
+        params.put("sDestinat", poData.getDestinat());
+        params.put("sTransNox", poData.getTransNox());
+        params.put("sReferNox", poData.getReferNo());
+        params.put("dTransact", SQLUtil.dateFormat(poData.getDateTransact(), SQLUtil.FORMAT_LONG_DATE));
+        params.put("sPrintdBy", psClientNm);
+        
+        JSONObject loJSON;
+
+        try {
+            String lsSQL = "SELECT sClientNm FROM Client_Master WHERE sClientID = " + SQLUtil.toSQL(poData.getSupplier());
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+
+            if (loRS.next()){
+                params.put("xSupplier", loRS.getString("sClientNm"));
+            } else {
+                params.put("xSupplier", "NOT SPECIFIED");
+            }
+            
+            lsSQL = "SELECT sClientNm FROM Client_Master WHERE sClientID IN (" +
+                        "SELECT sEmployNo FROM xxxSysUser WHERE sUserIDxx = " + SQLUtil.toSQL(poData.getApprovedBy().isEmpty() ? poData.getPreparedBy() : poData.getApprovedBy()) + ")";
+            loRS = poGRider.executeQuery(lsSQL);
+            
+            if (loRS.next()){
+                params.put("sApprval1", loRS.getString("sClientNm"));
+            } else {
+                params.put("sApprval1", "");
+            }
+            
+            params.put("sApprval2", "");
+            
+//            lsSQL = "SELECT sClientNm FROM Client_Master WHERE sClientID IN (" +
+//                        "SELECT sEmployNo FROM xxxSysUser WHERE sUserIDxx = " + SQLUtil.toSQL(poData.getApprovedBy()) + ")";
+//            loRS = poGRider.executeQuery(lsSQL);
+//            
+//            if (loRS.next()){
+//                params.put("sApprval2", loRS.getString("sClientNm"));
+//            } else {
+//                params.put("sApprval2", "NOT SPECIFIED");
+//            }
+            params.put("xRemarksx", poData.getRemarks());
+
+            JSONArray loArray = new JSONArray();
+
+            String lsBarCodex;
+            String lsDescript;
+            String lsMeasurex;
+            Inventory loInventory = new Inventory(poGRider, psBranchCd, true);
+
+            for (int lnCtr = 0; lnCtr <= ItemCount() -1; lnCtr ++){
+                loInventory.BrowseRecord((String) getDetail(lnCtr, "sStockIDx"), true, false);
+                lsBarCodex = (String) loInventory.getMaster("sBarCodex");
+                lsDescript = (String) loInventory.getMaster("sDescript");
+                lsMeasurex = (String) loInventory.getMeasureMent(loInventory.getMaster("sMeasurID").toString());
+
+                loJSON = new JSONObject();
+                loJSON.put("sField01", lsBarCodex);
+                loJSON.put("sField02", lsDescript);
+                loJSON.put("sField03", lsMeasurex);
+                loJSON.put("sField04", getDetail(lnCtr, "sBrandNme"));
+                loJSON.put("nField01", getDetail(lnCtr, "nQuantity"));
+                loJSON.put("lField01", getDetail(lnCtr, "nUnitPrce"));
+                loArray.add(loJSON);
+            }
+       
+            InputStream stream = new ByteArrayInputStream(loArray.toJSONString().getBytes("UTF-8"));
+            JsonDataSource jrjson;
+            
+            jrjson = new JsonDataSource(stream);
+            
+            JasperPrint jrprint = JasperFillManager.fillReport(poGRider.getReportPath() + 
+                                                                "PurchaseOrderLP.jasper", params, jrjson);
+        
+            JasperViewer jv = new JasperViewer(jrprint, false);     
+            jv.setVisible(true);
+            jv.setAlwaysOnTop(true);
+        } catch (JRException | UnsupportedEncodingException | SQLException ex) {
+            Logger.getLogger(XMPOReceiving.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        }
+
+        return true;
+    }
+    //Member Variables
+    private GRider poGRider = null;
+    private String psUserIDxx = "";
+    private String psBranchCd = "";
+    private String psWarnMsg = "";
+    private String psErrMsgx = "";
+    private String psClientNm = "";
+    private boolean pbWithParent = false;
+    private int pnEditMode;
+    private int pnTranStat = 0;
+    private IMasterDetail poCallBack;
+    
+    private UnitPOMaster poData = new UnitPOMaster();
+    private UnitPODetail poDetail = new UnitPODetail();
+    private ArrayList<UnitPODetail> paDetail;
+    private ArrayList<UnitPOReceivingDetailOthers> paDetailOthers;
+    
+    private final String pxeModuleName = PurchaseOrders.class.getSimpleName();
+}
