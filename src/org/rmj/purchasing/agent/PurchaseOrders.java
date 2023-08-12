@@ -340,6 +340,39 @@ public class PurchaseOrders{
         // Typecast the Entity to this object
         loNewEnt = (UnitPOMaster) poData;        
           
+        
+        // Test if entry is ok
+        if (loNewEnt.getBranchCd()== null || loNewEnt.getBranchCd().isEmpty()){
+            setMessage("No branch detected.");
+            return false;
+        }
+        
+        if (loNewEnt.getDateTransact()== null){
+            setMessage("No transact date detected.");
+            return false;
+        }
+        
+        if (loNewEnt.getCompanyID()== null || loNewEnt.getCompanyID().isEmpty()){
+            setMessage("No company detected.");
+            return false;
+        }
+        
+        if (loNewEnt.getDestinat()== null || loNewEnt.getDestinat().isEmpty()){
+            setMessage("No destination detected.");
+            return false;
+        }
+        
+        if (loNewEnt.getSupplier()== null || loNewEnt.getSupplier().isEmpty()){
+            setMessage("No supplier detected.");
+            return false;
+        }
+
+        if (getDetail(ItemCount()-1,"sStockIDx").equals("")) deleteDetail(ItemCount() -1);
+        
+        if (ItemCount() <= 0){
+            setMessage("Unable to save no item record.");
+            return false;
+        }
         loNewEnt.setTranTotal(computeTotal());     
         if (!pbWithParent) poGRider.beginTrans();
         
@@ -416,7 +449,10 @@ public class PurchaseOrders{
             
             for (lnCtr = 0; lnCtr <= paDetail.size() -1; lnCtr++){
                 loNewEnt = paDetail.get(lnCtr);
-                
+                if (Double.parseDouble(loNewEnt.getQuantity().toString()) <= 0.00){
+                   setMessage("Unable to save zero quantity detail.");
+                   return false;
+                }
                 if (!loNewEnt.getStockID().equals("")){
                     loNewEnt.setTransNox(fsTransNox);
                     loNewEnt.setEntryNox(lnCtr + 1);
@@ -439,6 +475,10 @@ public class PurchaseOrders{
             
             for (lnCtr = 0; lnCtr <= paDetail.size()-1; lnCtr++){
                 loNewEnt = paDetail.get(lnCtr);
+                if (Double.parseDouble(loNewEnt.getQuantity().toString()) <= 0.00){
+                   setMessage("Unable to save zero quantity detail.");
+                   return false;
+                }
                 
                 if (!loNewEnt.getStockID().equals("")){
                     if (lnCtr <= laSubUnit.size()-1){
@@ -451,12 +491,12 @@ public class PurchaseOrders{
                                                 "nQtyOnHnd;sBrandNme");
 
                     } else{
-                        loNewEnt.setStockID(fsTransNox);
+                        loNewEnt.setTransNox(fsTransNox);
                         loNewEnt.setEntryNox(lnCtr + 1);
                         loNewEnt.setDateModified(poGRider.getServerDate());
                         lsSQL = MiscUtil.makeSQL((GEntity) loNewEnt,"nQtyOnHnd;sBrandNme");
                     }
-                    
+                    System.out.println("lsSQL = " + lsSQL);
                     if (!lsSQL.equals("")){
                         if(poGRider.executeQuery(lsSQL, loNewEnt.getTable(), "", "") == 0){
                             if(!poGRider.getErrMsg().isEmpty()){
@@ -482,9 +522,8 @@ public class PurchaseOrders{
                     }
                     break;
                 }
-            }
+            }  
         }
-
         return true;
     }
 
@@ -712,6 +751,7 @@ public class PurchaseOrders{
         String lsColName = "";
         String lsColCrit = "";
         String lsSQL = "";
+        String lsCondition = "";
         JSONObject loJSON;
         
         setErrMsg("");
@@ -725,7 +765,15 @@ public class PurchaseOrders{
                 lsHeader = "Barcode»Description»Brand»Unit»Qty. on hand»Inv. Type";
                 lsColName = "sBarCodex»sDescript»xBrandNme»sMeasurNm»nQtyOnHnd»xInvTypNm";
                 lsColCrit = "a.sBarCodex»a.sDescript»b.sDescript»f.sMeasurNm»e.nQtyOnHnd»d.sDescript";    
-                 loJSON = showFXDialog.jsonSearch(poGRider, 
+                if(ItemCount()>0){
+                    for(int lnCtr = 0; lnCtr < ItemCount(); lnCtr++){
+                        lsCondition += ", " + SQLUtil.toSQL(getDetail(lnCtr, "sStockIDx"));
+                    }
+                    lsCondition = " AND a.sStockIDx NOT IN (" + lsCondition.substring(2) + ") GROUP BY a.sStockIDx";
+                }
+                if(!lsCondition.isEmpty()) lsSQL = lsSQL + lsCondition;
+                System.out.println(lsSQL);
+                loJSON = showFXDialog.jsonSearch(poGRider, 
                                                         lsSQL, 
                                                         fsValue, 
                                                         lsHeader, 
@@ -748,17 +796,17 @@ public class PurchaseOrders{
                     
                     return true;
                 } else{
-                    setDetail(fnRow, fnCol, "");
-                    setDetail(fnRow, "sBrandNme", "");
-                    setDetail(fnRow, "nUnitPrce", 0);
-                    setDetail(fnRow, "nQtyOnHnd", 0);
-                    
-                    paDetailOthers.get(fnRow).setValue("sStockIDx", "");
-                    paDetailOthers.get(fnRow).setValue("xBarCodex", "");
-                    paDetailOthers.get(fnRow).setValue("xDescript", "");
-                    paDetailOthers.get(fnRow).setValue("xQtyOnHnd", 0);
-                    paDetailOthers.get(fnRow).setValue("nQtyOnHnd", 0);
-                    paDetailOthers.get(fnRow).setValue("sMeasurNm", "");
+//                    setDetail(fnRow, fnCol, "");
+//                    setDetail(fnRow, "sBrandNme", "");
+//                    setDetail(fnRow, "nUnitPrce", 0);
+//                    setDetail(fnRow, "nQtyOnHnd", 0);
+//                    
+//                    paDetailOthers.get(fnRow).setValue("sStockIDx", "");
+//                    paDetailOthers.get(fnRow).setValue("xBarCodex", "");
+//                    paDetailOthers.get(fnRow).setValue("xDescript", "");
+//                    paDetailOthers.get(fnRow).setValue("xQtyOnHnd", 0);
+//                    paDetailOthers.get(fnRow).setValue("nQtyOnHnd", 0);
+//                    paDetailOthers.get(fnRow).setValue("sMeasurNm", "");
                     return false;
                 }
             default:
@@ -1089,6 +1137,15 @@ public class PurchaseOrders{
     
     public boolean SearchMaster(String fsCol, String fsValue, boolean fbByCode){
         return SearchMaster(poData.getColumn(fsCol), fsValue, fbByCode);
+    }
+    
+    
+    public void ShowMessageFX(){
+        if (!getErrMsg().isEmpty()){
+            if (!getMessage().isEmpty())
+                ShowMessageFX.Error(getErrMsg(), pxeModuleName, getMessage());
+            else ShowMessageFX.Error(getErrMsg(), pxeModuleName, null);
+        }else ShowMessageFX.Information(null, pxeModuleName, getMessage());
     }
     
     public boolean printRecord(){

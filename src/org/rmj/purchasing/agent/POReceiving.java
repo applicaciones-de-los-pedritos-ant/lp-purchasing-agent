@@ -471,8 +471,34 @@ public class POReceiving{
         
         // Typecast the Entity to this object
         loNewEnt = (UnitPOReceivingMaster) poData;        
+        // Test if entry is ok
+        if (loNewEnt.getBranchCd()== null || loNewEnt.getBranchCd().isEmpty()){
+            setMessage("Invalid branch detected.");
+            return false;
+        }
+        
+        if (loNewEnt.getDateTransact()== null){
+            setMessage("Invalid transact date detected.");
+            return false;
+        }
+        
+        if (loNewEnt.getCompanyID()== null || loNewEnt.getCompanyID().isEmpty()){
+            setMessage("Invalid company detected.");
+            return false;
+        }
+        
+        if (loNewEnt.getSupplier() == null || loNewEnt.getSupplier().isEmpty()){
+            setMessage("Invalid supplier detected.");
+            return false;
+        }
                
         if (!pbWithParent) poGRider.beginTrans();
+        
+        
+        if (ItemCount() <= 0){
+            setMessage("Unable to save no item record.");
+            return false;
+        }
         
         //delete empty detail
         if (paDetail.get(ItemCount()-1).getStockID().equals("")) deleteDetail(ItemCount()-1);
@@ -547,7 +573,10 @@ public class POReceiving{
             
             for (lnCtr = 0; lnCtr <= paDetail.size() -1; lnCtr++){
                 loNewEnt = paDetail.get(lnCtr);
-                
+                if (Double.parseDouble(loNewEnt.getQuantity().toString()) <= 0.00){
+                   setMessage("Unable to save zero quantity detail.");
+                   return false;
+                }
                 if (!loNewEnt.getStockID().equals("")){
                     loNewEnt.setTransNox(fsTransNox);
                     loNewEnt.setEntryNox(lnCtr + 1);
@@ -570,6 +599,10 @@ public class POReceiving{
             
             for (lnCtr = 0; lnCtr <= paDetail.size()-1; lnCtr++){
                 loNewEnt = paDetail.get(lnCtr);
+                if (Double.parseDouble(loNewEnt.getQuantity().toString()) <= 0.00){
+                   setMessage("Unable to save zero quantity detail.");
+                   return false;
+                }
                 
                 if (!loNewEnt.getStockID().equals("")){
                     if (lnCtr <= laSubUnit.size()-1){
@@ -582,7 +615,7 @@ public class POReceiving{
                                                 "sBrandNme");
 
                     } else{
-                        loNewEnt.setStockID(fsTransNox);
+                        loNewEnt.setTransNox(fsTransNox);
                         loNewEnt.setEntryNox(lnCtr + 1);
                         loNewEnt.setDateModified(poGRider.getServerDate());
                         lsSQL = MiscUtil.makeSQL((GEntity) loNewEnt,"sBrandNme");
@@ -1013,6 +1046,7 @@ public class POReceiving{
         String lsColName = "";
         String lsColCrit = "";
         String lsSQL = "";
+        String lsCondition = "";
         JSONObject loJSON;
         ResultSet loRS;
         
@@ -1052,6 +1086,13 @@ public class POReceiving{
                 else 
                     lsSQL = MiscUtil.addCondition(getSQ_Stocks((String) getDetail(fnRow, "sOrderNox")), "a.cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
                 
+                if(ItemCount()>0){
+                    for(int lnCtr = 0; lnCtr < ItemCount(); lnCtr++){
+                        lsCondition += ", " + SQLUtil.toSQL(getDetail(lnCtr, "sStockIDx"));
+                    }
+                    lsCondition = " AND a.sStockIDx NOT IN (" + lsCondition.substring(2) + ") GROUP BY a.sStockIDx";
+                }
+                
                 if (fbByCode){
                     lsSQL = MiscUtil.addCondition(lsSQL, "a.sStockIDx = " + SQLUtil.toSQL(fsValue));
                     
@@ -1082,12 +1123,12 @@ public class POReceiving{
                     return true;
                 } else{
                     setDetail(fnRow, fnCol, "");
-                    //delete the barcode and descript on temp table
-                    setDetail(fnRow, 100, "");
-                    setDetail(fnRow, 101, "");
-                    setDetail(fnRow, 102, "");
-                    setDetail(fnRow, "sBrandNme", "");
-                    
+//                    //delete the barcode and descript on temp table
+//                    setDetail(fnRow, 100, "");
+//                    setDetail(fnRow, 101, "");
+//                    setDetail(fnRow, 102, "");
+//                    setDetail(fnRow, "sBrandNme", "");
+//                    
                     if (fnCol == 4)
                         setDetail(fnRow, "nUnitPrce", 0.00);
                     return false;
@@ -1760,6 +1801,14 @@ public class POReceiving{
             MiscUtil.close(loRS);
             MiscUtil.close(loStmt);
         }
+    }
+    
+    public void ShowMessageFX(){
+        if (!getErrMsg().isEmpty()){
+            if (!getMessage().isEmpty())
+                ShowMessageFX.Error(getErrMsg(), pxeModuleName, getMessage());
+            else ShowMessageFX.Error(getErrMsg(), pxeModuleName, getErrMsg());
+        }else ShowMessageFX.Information(null, pxeModuleName, getMessage());
     }
     
     public boolean printRecord(){
