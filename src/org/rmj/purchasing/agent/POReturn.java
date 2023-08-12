@@ -336,7 +336,10 @@ public class POReturn{
         
         //delete empty detail
         if (paDetail.get(ItemCount()-1).getStockID().equals("")) deleteDetail(ItemCount()-1);
-        
+        if (loNewEnt.getSupplier()== null || loNewEnt.getSupplier().isEmpty()){
+            setMessage("No supplier detected.");
+            return false;
+        }
         // Generate the SQL Statement
         if (pnEditMode == EditMode.ADDNEW){
             Connection loConn = null;
@@ -410,7 +413,14 @@ public class POReturn{
             
             for (lnCtr = 0; lnCtr <= paDetail.size() -1; lnCtr++){
                 loNewEnt = paDetail.get(lnCtr);
-                
+                if (Double.parseDouble(loNewEnt.getQuantity().toString()) <= 0.00){
+                   setMessage("Unable to save zero quantity detail.");
+                   return false;
+                }
+                if (Double.parseDouble(loNewEnt.getQuantity().toString()) <= 0.00){
+                   setMessage("Unable to save zero quantity detail.");
+                   return false;
+                }
                 if (!loNewEnt.getStockID().equals("")){
                     loNewEnt.setTransNox(fsTransNox);
                     loNewEnt.setEntryNox(lnCtr + 1);
@@ -433,7 +443,10 @@ public class POReturn{
             
             for (lnCtr = 0; lnCtr <= paDetail.size()-1; lnCtr++){
                 loNewEnt = paDetail.get(lnCtr);
-                
+                if (Double.parseDouble(loNewEnt.getQuantity().toString()) <= 0.00){
+                   setMessage("Unable to save zero quantity detail.");
+                   return false;
+                }
                 if (!loNewEnt.getStockID().equals("")){
                     if (lnCtr <= laSubUnit.size()-1){
                         if (loNewEnt.getEntryNox() != lnCtr+1) loNewEnt.setEntryNox(lnCtr+1);
@@ -445,7 +458,7 @@ public class POReturn{
                                                 "sBrandNme");
 
                     } else{
-                        loNewEnt.setStockID(fsTransNox);
+                        loNewEnt.setTransNox(fsTransNox);
                         loNewEnt.setEntryNox(lnCtr + 1);
                         loNewEnt.setDateModified(poGRider.getServerDate());
                         lsSQL = MiscUtil.makeSQL((GEntity) loNewEnt,"sBrandNme");
@@ -799,27 +812,54 @@ public class POReturn{
                 lsHeader = "Brand»Description»Unit»Model»Inv. Type»Barcode»Stock ID";
                 lsColName = "xBrandNme»sDescript»sMeasurNm»xModelNme»xInvTypNm»sBarCodex»sStockIDx";
                 lsColCrit = "b.sDescript»a.sDescript»f.sMeasurNm»c.sDescript»d.sDescript»a.sBarCodex»a.sStockIDx";
+                System.out.println("sPOTransx = " + getMaster("sPOTransx"));
+                
+                String lsCondition = "";
+                if(ItemCount()>0){
+                    for(int lnCtr = 0; lnCtr < ItemCount(); lnCtr++){
+                        lsCondition += ", " + SQLUtil.toSQL(getDetail(lnCtr, "sStockIDx"));
+                    }
+                    lsCondition = " AND a.sStockIDx NOT IN (" + lsCondition.substring(2) + ") GROUP BY a.sStockIDx";
+                }
+                
                 
                 if (getMaster("sPOTransx").equals(""))
-                    lsSQL = MiscUtil.addCondition(getSQ_Stocks(""), "a.cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
-                else 
+                    lsSQL = MiscUtil.addCondition(getSQ_Stocks(), "a.cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE)) + lsCondition;
+                else
                     lsSQL = MiscUtil.addCondition(getSQ_Stocks((String) getMaster("sPOTransx")), 
-                                                    "a.cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
+                                                    "a.cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE)) + lsCondition;
                 
-                System.out.println(lsSQL);
-                loJSON = showFXDialog.jsonSearch(poGRider, 
+                
+                
+                
+                
+//                if (fbByCode){
+//                    lsSQL = MiscUtil.addCondition(lsSQL, "a.sBarCodex LIKE " + SQLUtil.toSQL(fsValue));
+//                    
+//                    loRS = poGRider.executeQuery(lsSQL);
+//                    
+//                    loJSON = showFXDialog.jsonBrowse(poGRider, loRS, lsHeader, lsColName);
+//                }else {
+//                    loJSON = showFXDialog.jsonSearch(poGRider, 
+//                                                        lsSQL, 
+//                                                        fsValue, 
+//                                                        lsHeader, 
+//                                                        lsColName, 
+//                                                        lsColCrit, 
+//                                                        fbSearch ? 1 : 5);
+//                }
+                System.out.println("lsSQL = " + lsSQL);
+                 loJSON = showFXDialog.jsonSearch(poGRider, 
                                                         lsSQL, 
                                                         fsValue, 
                                                         lsHeader, 
                                                         lsColName, 
                                                         lsColCrit, 
-                                                        fbByCode ? 5 : 1);
+                                                        fbSearch ? 1 : 5);
                                 
                 if (loJSON != null){
                     setDetail(fnRow, fnCol, (String) loJSON.get("sStockIDx"));
-                        System.out.println("sBrandNme = " + loJSON.get("xBrandNme"));
                     
-                        setDetail(fnRow, "sBrandNme", (String) loJSON.get("xBrandNme"));
                     if (loJSON.get("nQuantity")!=null){
                         setDetail(fnRow, "nQuantity", Double.valueOf((String)loJSON.get("nQuantity")));
                         setDetail(fnRow, "dExpiryDt", CommonUtils.toDate((String) loJSON.get("dExpiryDt")));
@@ -828,14 +868,64 @@ public class POReturn{
                     }
                     return true;
                 } else{
-                    setDetail(fnRow, fnCol, "");
-                    setDetail(fnRow, "sBrandNme", "");
+//                    setDetail(fnRow, fnCol, "");
+//                    setDetail(fnRow, "sBrandNme", "");
                     return false;
                 }
             default:
                 return false;
         }
     }
+//    
+//    public boolean SearchDetail(int fnRow, int fnCol, String fsValue, boolean fbSearch, boolean fbByCode){
+//        String lsHeader = "";
+//        String lsColName = "";
+//        String lsColCrit = "";
+//        String lsSQL = "";
+//        JSONObject loJSON;
+//        ResultSet loRS;
+//        switch(fnCol){
+//            case 3:
+//                lsHeader = "Brand»Description»Unit»Model»Inv. Type»Barcode»Stock ID";
+//                lsColName = "xBrandNme»sDescript»sMeasurNm»xModelNme»xInvTypNm»sBarCodex»sStockIDx";
+//                lsColCrit = "b.sDescript»a.sDescript»f.sMeasurNm»c.sDescript»d.sDescript»a.sBarCodex»a.sStockIDx";
+//                
+//                if (getMaster("sPOTransx").equals(""))
+//                    lsSQL = MiscUtil.addCondition(getSQ_Stocks(""), "a.cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
+//                else 
+//                    lsSQL = MiscUtil.addCondition(getSQ_Stocks((String) getMaster("sPOTransx")), 
+//                                                    "a.cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
+//                
+//                System.out.println(lsSQL);
+//                loJSON = showFXDialog.jsonSearch(poGRider, 
+//                                                        lsSQL, 
+//                                                        fsValue, 
+//                                                        lsHeader, 
+//                                                        lsColName, 
+//                                                        lsColCrit, 
+//                                                        fbByCode ? 5 : 1);
+//                                
+//                if (loJSON != null){
+//                    setDetail(fnRow, fnCol, (String) loJSON.get("sStockIDx"));
+//                        System.out.println("sBrandNme = " + loJSON.get("xBrandNme"));
+//                    
+//                        setDetail(fnRow, "sBrandNme", (String) loJSON.get("xBrandNme"));
+//                    if (loJSON.get("nQuantity")!=null){
+//                        setDetail(fnRow, "nQuantity", Double.valueOf((String)loJSON.get("nQuantity")));
+//                        setDetail(fnRow, "dExpiryDt", CommonUtils.toDate((String) loJSON.get("dExpiryDt")));
+//                        setDetail(fnRow, "nFreightx", Double.valueOf((String)loJSON.get("nFreightx")));
+//                        setDetail(fnRow, "nUnitPrce", Double.valueOf((String)loJSON.get("xUnitPrce")));
+//                    }
+//                    return true;
+//                } else{
+//                    setDetail(fnRow, fnCol, "");
+//                    setDetail(fnRow, "sBrandNme", "");
+//                    return false;
+//                }
+//            default:
+//                return false;
+//        }
+//    }
     
     public boolean SearchDetail(int fnRow, String fsCol, String fsValue, boolean fbSearch, boolean fbByCode){
         return SearchDetail(fnRow, poDetail.getColumn(fsCol), fsValue, fbSearch, fbByCode);
@@ -907,9 +997,9 @@ public class POReturn{
     public String getSQ_Master() {
         return MiscUtil.makeSelect(new UnitPOReturnMaster());
     }
-    private String getSQ_Stocks(String fsPOTransx){
-        if (fsPOTransx.isEmpty())
-            return "SELECT " +
+    
+    private String getSQ_Stocks(){
+       String lsSQL =  "SELECT " +
                         "  a.sStockIDx" +
                         ", a.sBarCodex" + 
                         ", a.sDescript" + 
@@ -952,9 +1042,13 @@ public class POReturn{
                         ", Inv_Master e" + 
                     " WHERE a.sStockIDx = e.sStockIDx" + 
                         " AND e.sBranchCd = " + SQLUtil.toSQL(psBranchCd);
+        if (!System.getProperty("store.inventory.type").isEmpty())
+            lsSQL = MiscUtil.addCondition(lsSQL, "a.sInvTypCd IN " + CommonUtils.getParameter(System.getProperty("store.inventory.type")));
         
-                            //" AND e.nQtyOnHnd > 0"
-        else 
+        return lsSQL;
+    }
+    private String getSQ_Stocks(String fsPOTransx){
+       
             return "SELECT " +
                         "  a.sStockIDx" +
                         ", a.sBarCodex" + 
@@ -1126,56 +1220,6 @@ public class POReturn{
                 " FROM PO_Return_Master";
     }
     
-    private String getSQ_Stocks(){
-       String lsSQL =  "SELECT " +
-                    "  a.sStockIDx" +
-                    ", a.sBarCodex" + 
-                    ", a.sDescript" + 
-                    ", a.sBriefDsc" + 
-                    ", a.sAltBarCd" + 
-                    ", a.sCategCd1" + 
-                    ", a.sCategCd2" + 
-                    ", a.sCategCd3" + 
-                    ", a.sCategCd4" + 
-                    ", a.sBrandCde" + 
-                    ", a.sModelCde" + 
-                    ", a.sColorCde" + 
-                    ", a.sInvTypCd" + 
-                    ", a.nUnitPrce" + 
-                    ", a.nSelPrice" + 
-                    ", a.nDiscLev1" + 
-                    ", a.nDiscLev2" + 
-                    ", a.nDiscLev3" + 
-                    ", a.nDealrDsc" + 
-                    ", a.cComboInv" + 
-                    ", a.cWthPromo" + 
-                    ", a.cSerialze" + 
-                    ", a.cUnitType" + 
-                    ", a.cInvStatx" + 
-                    ", a.sSupersed" + 
-                    ", a.cRecdStat" + 
-                    ", b.sDescript xBrandNme" + 
-                    ", c.sDescript xModelNme" + 
-                    ", d.sDescript xInvTypNm" + 
-                    ", f.sMeasurNm" +
-                    ", IFNULL(e.nQtyOnHnd,0) nQtyOnHnd" +
-                " FROM Inventory a" + 
-                        " LEFT JOIN Brand b" + 
-                            " ON a.sBrandCde = b.sBrandCde" + 
-                        " LEFT JOIN Model c" + 
-                            " ON a.sModelCde = c.sModelCde" + 
-                        " LEFT JOIN Inv_Type d" + 
-                            " ON a.sInvTypCd = d.sInvTypCd" + 
-                        " LEFT JOIN Measure f" +
-                            " ON a.sMeasurID = f.sMeasurID" +
-                    ", Inv_Master e" + 
-                " WHERE a.sStockIDx = e.sStockIDx" + 
-                    " AND e.sBranchCd = " + SQLUtil.toSQL(psBranchCd);
-        if (!System.getProperty("store.inventory.type").isEmpty())
-            lsSQL = MiscUtil.addCondition(lsSQL, "a.sInvTypCd IN " + CommonUtils.getParameter(System.getProperty("store.inventory.type")));
-        
-        return lsSQL;
-    }
     private String getPODetail(String fsOrderNox){
         return "SELECT " +
                     "  a.sTransNox" +
@@ -1390,7 +1434,13 @@ public class POReturn{
         }
     }
     
-    
+    public void ShowMessageFX(){
+        if (!getErrMsg().isEmpty()){
+            if (!getMessage().isEmpty())
+                ShowMessageFX.Error(getErrMsg(), pxeModuleName, getMessage());
+            else ShowMessageFX.Error(getErrMsg(), pxeModuleName, null);
+        }else ShowMessageFX.Information(null, pxeModuleName, getMessage());
+    }
     public boolean printRecord(){
         if (pnEditMode != EditMode.READY || poData == null){
             ShowMessageFX.Warning("Unable to print transaction.", "Warning", "No record loaded.");
