@@ -1441,7 +1441,7 @@ public class POReturn{
             else ShowMessageFX.Error(getErrMsg(), pxeModuleName, null);
         }else ShowMessageFX.Information(null, pxeModuleName, getMessage());
     }
-    public boolean printRecord(){
+        public boolean printRecord(){
         if (pnEditMode != EditMode.READY || poData == null){
             ShowMessageFX.Warning("Unable to print transaction.", "Warning", "No record loaded.");
             return false;
@@ -1473,19 +1473,23 @@ public class POReturn{
         
         String lsBarCodex;
         String lsDescript;
+        String lsMeasurex;
         Inventory loInventory = new Inventory(poGRider, psBranchCd, true);
         
         for (int lnCtr = 0; lnCtr <= ItemCount() -1; lnCtr ++){
             loInventory.BrowseRecord((String) getDetail(lnCtr, "sStockIDx"), true, false);
             lsBarCodex = (String) loInventory.getMaster("sBarCodex");
             lsDescript = (String) loInventory.getMaster("sDescript");
+            lsMeasurex = (String) loInventory.getMeasureMent(loInventory.getMaster("sMeasurID").toString());
             
             loJSON = new JSONObject();
             loJSON.put("sField01", lsBarCodex);
             loJSON.put("sField02", lsDescript);
-            loJSON.put("sField03", getDetail(lnCtr, "sBrandNme"));
+            loJSON.put("sField03", lsMeasurex);
+            loJSON.put("sField04", getDetail(lnCtr, "sBrandNme"));
             loJSON.put("nField01", getDetail(lnCtr, "nQuantity"));
-            loJSON.put("lField01", getDetail(lnCtr, "nUnitPrce"));
+            loJSON.put("nField02", getDetail(lnCtr, "nUnitPrce"));
+            loJSON.put("nField03", ( Double.parseDouble(getDetail(lnCtr, "nUnitPrce").toString()) *  Double.parseDouble(getDetail(lnCtr, "nQuantity").toString())));
             loArray.add(loJSON);
         }
                  

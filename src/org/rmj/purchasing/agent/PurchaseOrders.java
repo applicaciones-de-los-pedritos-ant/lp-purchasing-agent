@@ -1219,8 +1219,10 @@ public class PurchaseOrders{
                 loJSON.put("sField03", lsMeasurex);
                 loJSON.put("sField04", getDetail(lnCtr, "sBrandNme"));
                 loJSON.put("nField01", getDetail(lnCtr, "nQuantity"));
-                loJSON.put("lField01", getDetail(lnCtr, "nUnitPrce"));
+                loJSON.put("nField02", getDetail(lnCtr, "nUnitPrce"));
+                loJSON.put("nField03", ( Double.parseDouble(getDetail(lnCtr, "nUnitPrce").toString()) *  Double.parseDouble(getDetail(lnCtr, "nQuantity").toString())));
                 loArray.add(loJSON);
+                System.out.println("nQuantity = " + getDetail(lnCtr, "nQuantity"));
             }
        
             InputStream stream = new ByteArrayInputStream(loArray.toJSONString().getBytes("UTF-8"));
