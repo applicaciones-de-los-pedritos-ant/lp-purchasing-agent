@@ -1824,15 +1824,32 @@ public class POReceiving{
         params.put("sAddressx", poGRider.getAddress() + ", " + poGRider.getTownName() + " " +poGRider.getProvince());
         JSONObject loSupplier = GetSupplier(poData.getSupplier(), true);
         if (loSupplier != null) {
-            params.put("sSupplier", loSupplier.get("sClientNm"));
+            params.put("xSupplier", loSupplier.get("sClientNm"));
         }else{
-            params.put("sSupplier", "NONE");
+            params.put("xSupplier", "NONE");
         }
         params.put("sTransNox", poData.getTransNox());
         params.put("sReferNox", poData.getReferNo());
         params.put("dTransact", SQLUtil.dateFormat(poData.getDateTransact(), SQLUtil.FORMAT_LONG_DATE));
         params.put("dReferDte", SQLUtil.dateFormat(poData.getReferDate(), SQLUtil.FORMAT_LONG_DATE));
         params.put("sPrintdBy", psClientNm);
+        
+        
+        String lsSQL = "SELECT sClientNm FROM Client_Master WHERE sClientID IN (" +
+                    "SELECT sEmployNo FROM xxxSysUser WHERE sUserIDxx = " + SQLUtil.toSQL(poData.getApprovedBy().isEmpty() ? poData.getPreparedBy() : poData.getApprovedBy()) + ")";
+        ResultSet  loRS = poGRider.executeQuery(lsSQL);
+
+        try {
+            if (loRS.next()){
+                params.put("sApprval1", loRS.getString("sClientNm"));
+            } else {
+                params.put("sApprval1", "");
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(POReturn.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        params.put("sApprval2", "");
         
         JSONObject loJSON;
         JSONArray loArray = new JSONArray();
