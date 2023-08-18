@@ -1453,6 +1453,7 @@ public class POReturn{
         
         try {
             if (loRS.next()) lsSupplier = loRS.getString("sClientNm");
+            
         } catch (SQLException ex) {
             Logger.getLogger(XMPOReturn.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -1464,9 +1465,26 @@ public class POReturn{
         params.put("sAddressx", poGRider.getAddress() + ", " + poGRider.getTownName() + " " +poGRider.getProvince());
         params.put("sTransNox", poData.getTransNox());
         params.put("sReferNox", poData.getPOTrans());
-        params.put("sSupplier", lsSupplier);
+        params.put("xSupplier", lsSupplier);
         params.put("dTransact", SQLUtil.dateFormat(poData.getDateTransact(), SQLUtil.FORMAT_LONG_DATE));
-        params.put("sPrintdBy", System.getProperty("user.name"));
+        params.put("sPrintdBy", psClientNm);
+        
+        
+        String lsSQL = "SELECT sClientNm FROM Client_Master WHERE sClientID IN (" +
+                    "SELECT sEmployNo FROM xxxSysUser WHERE sUserIDxx = " + SQLUtil.toSQL(poData.getApprovedBy().isEmpty() ? poData.getPreparedBy() : poData.getApprovedBy()) + ")";
+        loRS = poGRider.executeQuery(lsSQL);
+
+        try {
+            if (loRS.next()){
+                params.put("sApprval1", loRS.getString("sClientNm"));
+            } else {
+                params.put("sApprval1", "");
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(POReturn.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        params.put("sApprval2", "");
         
         JSONObject loJSON;
         JSONArray loArray = new JSONArray();
