@@ -607,6 +607,7 @@ public class POReceiving{
                 if (!loNewEnt.getStockID().equals("")){
                     if (lnCtr <= laSubUnit.size()-1){
                         if (loNewEnt.getEntryNox() != lnCtr+1) loNewEnt.setEntryNox(lnCtr+1);
+                        if(loNewEnt.getTransNox().isEmpty())loNewEnt.setTransNox(fsTransNox);
                         
                         lsSQL = MiscUtil.makeSQL((GEntity) loNewEnt, 
                                                 (GEntity) laSubUnit.get(lnCtr), 
@@ -645,6 +646,20 @@ public class POReceiving{
                         }
                     }
                     break;
+                }
+            }
+            if(lnCtr == laSubUnit.size() - 1){
+                lsSQL = "DELETE FROM " + poDetail.getTable()+
+                        " WHERE sStockIDx = " + SQLUtil.toSQL(laSubUnit.get(lnCtr).getStockID()) +
+                            " AND nEntryNox = " + SQLUtil.toSQL(laSubUnit.get(lnCtr).getEntryNox());
+
+                if (!lsSQL.equals("")){
+                    if(poGRider.executeQuery(lsSQL, poDetail.getTable(), "", "") == 0){
+                        if(!poGRider.getErrMsg().isEmpty()){
+                            setErrMsg(poGRider.getErrMsg());
+                            return false;
+                        }
+                    } 
                 }
             }
         }
@@ -1918,3 +1933,4 @@ public class POReceiving{
     
     private final String pxeModuleName = POReceiving1.class.getSimpleName();
 }
+    
