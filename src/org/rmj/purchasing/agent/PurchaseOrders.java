@@ -67,7 +67,7 @@ public class PurchaseOrders{
         String lsColCrit = "a.sTransNox»a.dTransact";
         String lsSQL = getSQ_POMaster();
         JSONObject loJSON;
-        
+        System.out.println(lsSQL);
         loJSON = showFXDialog.jsonSearch(poGRider, 
                                             lsSQL, 
                                             fsValue, 
@@ -299,6 +299,7 @@ public class PurchaseOrders{
             }
         } catch (SQLException e) {
             //log error message
+            setErrMsg(e.getMessage());
             return null;
         }        
         
@@ -412,6 +413,7 @@ public class PurchaseOrders{
             if(poGRider.executeQuery(lsSQL, loNewEnt.getTable(), "", "") == 0){
                 if(!poGRider.getErrMsg().isEmpty())
                     setErrMsg(poGRider.getErrMsg());
+                    
                 else 
                     setMessage("No record updated");
             } 
@@ -440,7 +442,7 @@ public class PurchaseOrders{
         }
         
         int lnCtr;
-        String lsSQL;
+        String lsSQL = "";
         UnitPODetail loNewEnt = null;
         
         if (pnEditMode == EditMode.ADDNEW){
@@ -474,6 +476,7 @@ public class PurchaseOrders{
             ArrayList<UnitPODetail> laSubUnit = loadTransactionDetail(poData.getTransNox());
             
             for (lnCtr = 0; lnCtr <= paDetail.size()-1; lnCtr++){
+                
                 loNewEnt = paDetail.get(lnCtr);
                 if (Double.parseDouble(loNewEnt.getQuantity().toString()) <= 0.00){
                    setMessage("Unable to save zero quantity detail.");
@@ -481,9 +484,35 @@ public class PurchaseOrders{
                 }
                 
                 if (!loNewEnt.getStockID().equals("")){
+//                    System.out.println("paDetail = " + paDetail.size());
+//                    System.out.println("laSubUnit = " + laSubUnit.size());
+//                    if (lnCtr > laSubUnit.size()-1){
+//                        loNewEnt.setTransNox(fsTransNox);
+//                        loNewEnt.setEntryNox(lnCtr + 1);
+//                        loNewEnt.setDateModified(poGRider.getServerDate());
+//                        lsSQL = MiscUtil.makeSQL((GEntity) loNewEnt,"nQtyOnHnd;sBrandNme");
+//
+//                    }else if (lnCtr == laSubUnit.size()-1){
+//                        if (loNewEnt.getEntryNox() != lnCtr+1) loNewEnt.setEntryNox(lnCtr+1);
+//                        if(loNewEnt.getTransNox().isEmpty())loNewEnt.setTransNox(fsTransNox);
+//                        lsSQL = MiscUtil.makeSQL((GEntity) loNewEnt, 
+//                                                (GEntity) laSubUnit.get(lnCtr), 
+//                                                " nEntryNox = " + SQLUtil.toSQL(loNewEnt.getValue(2)) + 
+//                                                " AND sTransNox = " + SQLUtil.toSQL(fsTransNox),
+//                                                "nQtyOnHnd;sBrandNme");
+//
+//                    }else  if (lnCtr < laSubUnit.size()-1){
+//                        if (loNewEnt.getEntryNox() != lnCtr+1) loNewEnt.setEntryNox(lnCtr+1);
+//                        if(loNewEnt.getTransNox().isEmpty())loNewEnt.setTransNox(fsTransNox);
+//                        lsSQL = MiscUtil.makeSQL((GEntity) loNewEnt, 
+//                                                (GEntity) laSubUnit.get(lnCtr), 
+//                                                " nEntryNox = " + SQLUtil.toSQL(loNewEnt.getValue(2)) + 
+//                                                " AND sTransNox = " + SQLUtil.toSQL(fsTransNox),
+//                                                "nQtyOnHnd;sBrandNme");
+//                    }
                     if (lnCtr <= laSubUnit.size()-1){
                         if (loNewEnt.getEntryNox() != lnCtr+1) loNewEnt.setEntryNox(lnCtr+1);
-                        
+                        if(loNewEnt.getTransNox().isEmpty())loNewEnt.setTransNox(fsTransNox);
                         lsSQL = MiscUtil.makeSQL((GEntity) loNewEnt, 
                                                 (GEntity) laSubUnit.get(lnCtr), 
                                                 " nEntryNox = " + SQLUtil.toSQL(loNewEnt.getValue(2)) + 
@@ -496,6 +525,7 @@ public class PurchaseOrders{
                         loNewEnt.setDateModified(poGRider.getServerDate());
                         lsSQL = MiscUtil.makeSQL((GEntity) loNewEnt,"nQtyOnHnd;sBrandNme");
                     }
+                    
                     System.out.println("lsSQL = " + lsSQL);
                     if (!lsSQL.equals("")){
                         if(poGRider.executeQuery(lsSQL, loNewEnt.getTable(), "", "") == 0){
@@ -522,7 +552,22 @@ public class PurchaseOrders{
                     }
                     break;
                 }
-            }  
+            } 
+            if(lnCtr == laSubUnit.size() - 1){
+                lsSQL = "DELETE FROM " + poDetail.getTable()+
+                        " WHERE sStockIDx = " + SQLUtil.toSQL(laSubUnit.get(lnCtr).getStockID()) +
+                            " AND nEntryNox = " + SQLUtil.toSQL(laSubUnit.get(lnCtr).getEntryNox());
+
+                if (!lsSQL.equals("")){
+                    if(poGRider.executeQuery(lsSQL, poDetail.getTable(), "", "") == 0){
+                        if(!poGRider.getErrMsg().isEmpty()){
+                            setErrMsg(poGRider.getErrMsg());
+                            return false;
+                        }
+                    } 
+                }
+            }
+              
         }
         return true;
     }
