@@ -68,9 +68,9 @@ public class POReturn{
     }
     
     public boolean BrowseRecord(String fsValue, boolean fbByCode){
-        String lsHeader = "Inv. Type»Supplier»Date»Inv. Type»Date";
-        String lsColName = "sInvTypCd»sClientNm»dTransact»sDescript»dTransact";
-        String lsColCrit = "a.sInvTypCd»d.sClientNm»a.dTransact»c.sDescript»a.dTransact";
+        String lsHeader = "Trans No.»Supplier»Date»Inv. Type»Date";
+        String lsColName = "sTransNox»sClientNm»dTransact»sDescript»dTransact";
+        String lsColCrit = "a.sTransNox»d.sClientNm»a.dTransact»c.sDescript»a.dTransact";
         String lsSQL = getSQ_POReturn();
        
         JSONObject loJSON = showFXDialog.jsonSearch(poGRider, 
@@ -96,8 +96,9 @@ public class POReturn{
                     paDetail.get(ItemCount() -1).getQuantity().doubleValue() != 0.00){
                 paDetail.add(new UnitPOReturnDetail());
                 
+                
             }
-        }
+        } 
         return true;
     }
     public boolean deleteDetail(int fnRow) {
