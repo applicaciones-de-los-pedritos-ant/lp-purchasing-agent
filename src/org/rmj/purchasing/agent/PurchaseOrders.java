@@ -62,10 +62,10 @@ public class PurchaseOrders{
     }
     
     public boolean BrowseRecord(String fsValue, boolean fbByCode){
-        String lsHeader = "Trans. No»Date";
-        String lsColName = "sTransNox»dTransact";
-        String lsColCrit = "a.sTransNox»a.dTransact";
-        String lsSQL = getSQ_POMaster();
+        String lsHeader = "Trans No»Supplier»Refer No»Inv. Type»Date";
+        String lsColName = "sTransNox»sClientNm»sReferNox»sDescript»dTransact";
+        String lsColCrit = "a.sTransNox»d.sClientNm»a.sReferNox»c.sDescript»a.dTransact";
+        String lsSQL = getSQL_POMaster();
         JSONObject loJSON;
         System.out.println(lsSQL);
         loJSON = showFXDialog.jsonSearch(poGRider, 
@@ -965,6 +965,46 @@ public class PurchaseOrders{
     
     public int getEditMode(){return pnEditMode;}
     
+    private String getSQL_POMaster(){
+        String lsTranStat = String.valueOf(pnTranStat);
+        String lsCondition = "";
+        if (lsTranStat.length() == 1) {
+            lsCondition = "a.cTranStat = " + SQLUtil.toSQL(lsTranStat);
+        } else {
+            for (int lnCtr = 0; lnCtr <= lsTranStat.length() -1; lnCtr++){
+                lsCondition = lsCondition + SQLUtil.toSQL(String.valueOf(lsTranStat.charAt(lnCtr))) + ",";
+            }
+            lsCondition = "(" + lsCondition.substring(0, lsCondition.length()-1) + ")";
+            lsCondition = "a.cTranStat IN " + lsCondition;
+        }
+        
+        return MiscUtil.addCondition("SELECT " +
+                                        "  a.sTransNox" +
+                                        ", a.sBranchCd" + 
+                                        ", a.dTransact" +
+                                        ", a.sInvTypCd" +
+                                        ", a.nTranTotl" + 
+                                        ", b.sBranchNm" + 
+                                        ", c.sDescript" + 
+                                        ", d.sClientNm" + 
+                                        ", a.cTranStat" + 
+                                        ", a.sReferNox" + 
+                                        ", CASE " +
+                                            " WHEN a.cTranStat = '0' THEN 'OPEN'" +
+                                            " WHEN a.cTranStat = '1' THEN 'CLOSED'" +
+                                            " WHEN a.cTranStat = '2' THEN 'POSTED'" +
+                                            " WHEN a.cTranStat = '3' THEN 'CANCELLED'" +
+                                            " WHEN a.cTranStat = '4' THEN 'VOID'" +
+                                            " END AS xTranStat" +
+                                    " FROM PO_Master a" + 
+                                                " LEFT JOIN Branch b" + 
+                                                    " ON a.sBranchCd = b.sBranchCd" + 
+                                                " LEFT JOIN Inv_Type c" + 
+                                                    " ON a.sInvTypCd = c.sInvTypCd" + 
+                                            ", Client_Master d" + 
+                                    " WHERE a.sSupplier = d.sClientID" +
+                                        " AND LEFT(a.sTransNox, 4) = " + SQLUtil.toSQL(poGRider.getBranchCode()), lsCondition);
+    }
     private String getSQ_POMaster(){
         String lsTranStat = String.valueOf(pnTranStat);
         String lsCondition = "";
