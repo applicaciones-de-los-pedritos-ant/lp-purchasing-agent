@@ -1848,6 +1848,7 @@ public class POReceiving{
         params.put("dTransact", SQLUtil.dateFormat(poData.getDateTransact(), SQLUtil.FORMAT_LONG_DATE));
         params.put("dReferDte", SQLUtil.dateFormat(poData.getReferDate(), SQLUtil.FORMAT_LONG_DATE));
         params.put("sPrintdBy", psClientNm);
+        params.put("xRemarksx", poData.getRemarks());
         
         
         String lsSQL = "SELECT sClientNm FROM Client_Master WHERE sClientID IN (" +
