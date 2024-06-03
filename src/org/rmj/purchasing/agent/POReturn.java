@@ -394,6 +394,11 @@ public class POReturn{
     
     private boolean saveDetail(String fsTransNox){
         setMessage("");
+         int lnCtr;
+        String lsSQL;
+        UnitPOReturnDetail loNewEnt = null;
+        
+        for (lnCtr = 0; lnCtr <= paDetail.size() -1; lnCtr++){
         if (paDetail.isEmpty()){
             setMessage("Unable to save empty detail transaction.");
             return false;
@@ -403,25 +408,16 @@ public class POReturn{
             setMessage("Detail might not have item or zero quantity.");
             return false;
         }
+        }
         
-        int lnCtr;
-        String lsSQL;
-        UnitPOReturnDetail loNewEnt = null;
-        
+       
         if (pnEditMode == EditMode.ADDNEW){
             Connection loConn = null;
             loConn = setConnection();  
             
             for (lnCtr = 0; lnCtr <= paDetail.size() -1; lnCtr++){
                 loNewEnt = paDetail.get(lnCtr);
-                if (Double.parseDouble(loNewEnt.getQuantity().toString()) <= 0.00){
-                   setMessage("Unable to save zero quantity detail.");
-                   return false;
-                }
-                if (Double.parseDouble(loNewEnt.getQuantity().toString()) <= 0.00){
-                   setMessage("Unable to save zero quantity detail.");
-                   return false;
-                }
+                
                 if (!loNewEnt.getStockID().equals("")){
                     loNewEnt.setTransNox(fsTransNox);
                     loNewEnt.setEntryNox(lnCtr + 1);
@@ -825,9 +821,9 @@ public class POReturn{
         ResultSet loRS;
         switch(fnCol){
             case 3:
-                lsHeader = "Brand»Description»Unit»Model»Inv. Type»Barcode»Stock ID";
-                lsColName = "xBrandNme»sDescript»sMeasurNm»xModelNme»xInvTypNm»sBarCodex»sStockIDx";
-                lsColCrit = "b.sDescript»a.sDescript»f.sMeasurNm»c.sDescript»d.sDescript»a.sBarCodex»a.sStockIDx";
+                lsHeader = "Barcode»Description»Brand»Unit»Qty. On-Hand»Model»Inv. Type»Stock ID";
+                lsColName = "sBarCodex»sDescript»xBrandNme»sMeasurNm»nQtyOnHnd»xModelNme»xInvTypNm»sStockIDx";
+                lsColCrit = "a.sBarCodex»a.sDescript»b.sDescript»f.sMeasurNm»e.nQtyOnHnd»c.sDescript»d.sDescript»a.sStockIDx";
                 System.out.println("sPOTransx = " + getMaster("sPOTransx"));
                 
                 String lsCondition = "";
@@ -880,7 +876,8 @@ public class POReturn{
                         setDetail(fnRow, "nQuantity", Double.valueOf((String)loJSON.get("nQuantity")));
                         setDetail(fnRow, "dExpiryDt", CommonUtils.toDate((String) loJSON.get("dExpiryDt")));
                         setDetail(fnRow, "nFreightx", Double.valueOf((String)loJSON.get("nFreightx")));
-                        setDetail(fnRow, "nUnitPrce", Double.valueOf((String)loJSON.get("xUnitPrce")));
+                        setDetail(fnRow, "nUnitPrce", Double.valueOf((String)loJSON.get("xUnitPrce")));                        
+                        setDetail(fnRow, "sBrandNme", (String)loJSON.get("xBrandNme"));
                     }
                     return true;
                 } else{
@@ -1046,6 +1043,7 @@ public class POReturn{
                         ", c.sDescript xModelNme" + 
                         ", d.sDescript xInvTypNm" + 
                         ", f.sMeasurNm" +
+                        ", e.nQtyOnHnd" +
                     " FROM Inventory a" + 
                             " LEFT JOIN Brand b" + 
                                 " ON a.sBrandCde = b.sBrandCde" + 
@@ -1100,6 +1098,7 @@ public class POReturn{
                         ", g.dExpiryDt" +
                         ", g.nFreightx" +
                         ", g.nUnitPrce xUnitPrce" +
+                        ", e.nQtyOnHnd" +
                     " FROM Inventory a" + 
                             " LEFT JOIN Brand b" + 
                                 " ON a.sBrandCde = b.sBrandCde" + 
@@ -1174,7 +1173,7 @@ public class POReturn{
         return MiscUtil.addCondition("SELECT " +
                                         "  a.sTransNox" +
                                         ", a.sBranchCd" + 
-                                        ", a.dTransact" +
+                                        ", DATE_FORMAT(a.dTransact, '%m/%d/%Y') AS dTransact"  +
                                         ", a.sInvTypCd" +
                                         ", a.nTranTotl" + 
                                         ", b.sBranchNm" + 
