@@ -513,11 +513,11 @@ public class POReceiving {
             return false;
         }
         //addition 06032024
-        if (loNewEnt.getReferNo()== null || loNewEnt.getReferNo().isEmpty()) {
+        if (loNewEnt.getReferNo() == null || loNewEnt.getReferNo().isEmpty()) {
             setMessage("Invalid Reference No detected.");
             return false;
         }
-         if (loNewEnt.getReferDate()== null) {
+        if (loNewEnt.getReferDate() == null) {
             setMessage("Invalid Reference Date detected.");
             return false;
         }
@@ -1050,18 +1050,16 @@ public class POReceiving {
                     }
                 }
             }
+        }
+        if (!loInvTrans.POReceiving(fsTransNox, fdTransact, fsSupplier, EditMode.ADDNEW)) {
+            setMessage(loInvTrans.getMessage());
+            setErrMsg(loInvTrans.getErrMsg());
+            return false;
+        }
 
-            if (!loInvTrans.POReceiving(fsTransNox, fdTransact, fsSupplier, EditMode.ADDNEW)) {
-                setMessage(loInvTrans.getMessage());
-                setErrMsg(loInvTrans.getErrMsg());
-                return false;
-            }
-    }
-            return saveInvExpiration(fdTransact);
-        
-    }
+        return saveInvExpiration(fdTransact);
 
-    
+    }
 
     private boolean unsaveInvTrans(String fsTransNox, String fsSupplier) {
         String lsOrderNo = "";
