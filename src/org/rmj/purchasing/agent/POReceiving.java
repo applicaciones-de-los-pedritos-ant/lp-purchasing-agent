@@ -566,6 +566,10 @@ public class POReceiving {
             loNewEnt.setDateModified(poGRider.getServerDate());
 
             lbUpdate = saveDetail(loNewEnt.getTransNox());
+
+            if (loOldEnt.getTranStat().equalsIgnoreCase(TransactionStatus.STATE_CLOSED)) {
+                lbUpdate = saveInvUnitPrice();
+            }
             if (!lbUpdate) {
                 lsSQL = "";
             } else {
@@ -585,14 +589,14 @@ public class POReceiving {
             lbUpdate = true;
         }
 
-        if (!pbWithParent) {
-            if (!getErrMsg().isEmpty()) {
-                poGRider.rollbackTrans();
-            } else {
-                poGRider.commitTrans();
+            if (!pbWithParent) {
+                if (!getErrMsg().isEmpty()) {
+                    poGRider.rollbackTrans();
+                } else {
+                    poGRider.commitTrans();
+                }
             }
-        }
-
+        
         return lbUpdate;
     }
 
