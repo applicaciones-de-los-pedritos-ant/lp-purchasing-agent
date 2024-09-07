@@ -894,7 +894,7 @@ public class PurchaseOrders {
                         lsHeader,
                         lsColName,
                         lsColCrit,
-                        fbSearch ? 2 : 1);
+                        fbSearch ? 1 : 0);
 
                 if (loJSON != null) {
                     setDetail(fnRow, fnCol, (String) loJSON.get("sStockIDx"));
