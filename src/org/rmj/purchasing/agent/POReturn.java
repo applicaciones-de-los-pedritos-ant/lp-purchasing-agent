@@ -867,7 +867,7 @@ public class POReturn{
                                                         lsHeader, 
                                                         lsColName, 
                                                         lsColCrit, 
-                                                        fbSearch ? 1 : 5);
+                                                        fbSearch ? 0 : 1);
                                 
                 if (loJSON != null){
                     setDetail(fnRow, fnCol, (String) loJSON.get("sStockIDx"));
