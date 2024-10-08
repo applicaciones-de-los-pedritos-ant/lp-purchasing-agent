@@ -894,7 +894,7 @@ public class PurchaseOrders {
                         lsHeader,
                         lsColName,
                         lsColCrit,
-                        fbSearch ? 2 : 1);
+                        fbSearch ? 0 : 1);
 
                 if (loJSON != null) {
                     setDetail(fnRow, fnCol, (String) loJSON.get("sStockIDx"));
@@ -1352,7 +1352,7 @@ public class PurchaseOrders {
         params.put("sTransNox", poData.getTransNox());
         params.put("sReferNox", poData.getReferNo());
         params.put("dTransact", SQLUtil.dateFormat(poData.getDateTransact(), SQLUtil.FORMAT_LONG_DATE));
-        params.put("sPrintdBy", psClientNm);
+        params.put("sPrintdBy", poGRider.getClientName());
 
         JSONObject loJSON;
 
@@ -1375,18 +1375,19 @@ public class PurchaseOrders {
             } else {
                 params.put("sApprval1", "");
             }
+            
+            
+//            params.put("sApprval2", "");
 
-            params.put("sApprval2", "");
-
-//            lsSQL = "SELECT sClientNm FROM Client_Master WHERE sClientID IN (" +
-//                        "SELECT sEmployNo FROM xxxSysUser WHERE sUserIDxx = " + SQLUtil.toSQL(poData.getApprovedBy()) + ")";
-//            loRS = poGRider.executeQuery(lsSQL);
-//            
-//            if (loRS.next()){
-//                params.put("sApprval2", loRS.getString("sClientNm"));
-//            } else {
-//                params.put("sApprval2", "NOT SPECIFIED");
-//            }
+            lsSQL = "SELECT sClientNm FROM Client_Master WHERE sClientID IN (" +
+                        "SELECT sEmployNo FROM xxxSysUser WHERE sUserIDxx = " + SQLUtil.toSQL(poData.getApprovedBy()) + ")";
+            loRS = poGRider.executeQuery(lsSQL);
+            
+            if (loRS.next()){
+                params.put("sApprval2", loRS.getString("sClientNm"));
+            } else {
+                params.put("sApprval2", "");
+            }
             params.put("xRemarksx", poData.getRemarks());
 
             JSONArray loArray = new JSONArray();
