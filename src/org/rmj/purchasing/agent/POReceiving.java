@@ -517,6 +517,9 @@ public class POReceiving {
             setMessage("Invalid Reference No detected.");
             return false;
         }
+        if(!checkReferNox(loNewEnt.getTransNox(),loNewEnt.getReferNo())){
+            return false;
+        }
         if (loNewEnt.getReferDate() == null) {
             setMessage("Invalid Reference Date detected.");
             return false;
@@ -718,7 +721,32 @@ public class POReceiving {
 
         return true;
     }
+    public boolean checkReferNox(String fsTransNox, String fsReferNox) {
+        String lsSQL = getSQ_ReceivingMaster();
+        Connection loConn = null;
+        loConn = setConnection();
 
+        lsSQL = MiscUtil.addCondition(lsSQL, "sTransNox != " + SQLUtil.toSQL(fsTransNox));
+        lsSQL = MiscUtil.addCondition(lsSQL, "sReferNox = " + SQLUtil.toSQL(poGRider.getBranchCode()));
+        lsSQL = MiscUtil.addCondition(lsSQL, "sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()));
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+
+        try {
+            if (!loRS.next()) {
+                setMessage("Reference No already exist!!!");
+                return false;
+            } 
+        } catch (SQLException ex) {
+            setErrMsg(ex.getMessage());
+        } finally {
+            MiscUtil.close(loRS);
+            if (!pbWithParent) {
+                MiscUtil.close(loConn);
+            }
+        }
+
+        return true;
+    }
     public boolean deleteTransaction(String string) {
         UnitPOReceivingMaster loObject = loadTransaction(string);
         boolean lbResult = false;
