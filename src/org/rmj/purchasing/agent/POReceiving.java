@@ -517,8 +517,16 @@ public class POReceiving {
             setMessage("Invalid Reference No detected.");
             return false;
         }
-        if(!checkReferNox(loNewEnt.getTransNox(),loNewEnt.getReferNo())){
-            return false;
+        if (pnEditMode == EditMode.ADDNEW) {
+            if (!checkReferNox(loNewEnt.getTransNox(), loNewEnt.getReferNo())) {
+                return false;
+            }
+        } else {
+            if (loNewEnt.getReferNo() != poData.getReferNo()) {
+                if (!checkReferNox(loNewEnt.getTransNox(), loNewEnt.getReferNo())) {
+                    return false;
+                }
+            }
         }
         if (loNewEnt.getReferDate() == null) {
             setMessage("Invalid Reference Date detected.");
@@ -592,14 +600,14 @@ public class POReceiving {
             lbUpdate = true;
         }
 
-            if (!pbWithParent) {
-                if (!getErrMsg().isEmpty()) {
-                    poGRider.rollbackTrans();
-                } else {
-                    poGRider.commitTrans();
-                }
+        if (!pbWithParent) {
+            if (!getErrMsg().isEmpty()) {
+                poGRider.rollbackTrans();
+            } else {
+                poGRider.commitTrans();
             }
-        
+        }
+
         return lbUpdate;
     }
 
@@ -721,6 +729,7 @@ public class POReceiving {
 
         return true;
     }
+
     public boolean checkReferNox(String fsTransNox, String fsReferNox) {
         String lsSQL = getSQ_ReceivingMaster();
         Connection loConn = null;
@@ -735,7 +744,7 @@ public class POReceiving {
             if (!loRS.next()) {
                 setMessage("Reference No already exist!!!");
                 return false;
-            } 
+            }
         } catch (SQLException ex) {
             setErrMsg(ex.getMessage());
         } finally {
@@ -747,6 +756,7 @@ public class POReceiving {
 
         return true;
     }
+
     public boolean deleteTransaction(String string) {
         UnitPOReceivingMaster loObject = loadTransaction(string);
         boolean lbResult = false;
