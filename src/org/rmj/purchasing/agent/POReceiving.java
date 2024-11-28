@@ -1508,7 +1508,7 @@ public class POReceiving {
                 + " ON a.sInvTypCd = c.sInvTypCd"
                 + ", Client_Master d"
                 + " WHERE a.sSupplier = d.sClientID"
-                + " AND LEFT(a.sTransNox, 4) = " + SQLUtil.toSQL(poGRider.getBranchCode())
+//                + " AND LEFT(a.sTransNox, 4) = " + SQLUtil.toSQL(poGRider.getBranchCode())
                 + " AND a.cTranStat = '1'";
     }
 

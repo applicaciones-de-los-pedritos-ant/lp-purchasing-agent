@@ -69,10 +69,12 @@ public class POReceivingOfflineBranch {
     }
 
     public boolean BrowseRecord(String fsValue, boolean fbByCode) {
-        String lsHeader = "Refer Date»Supplier»Refer No»Inv. Type»Date»Trans No";
-        String lsColName = "dRefernce»sClientNm»sReferNox»sDescript»dTransact»sTransNox";
-        String lsColCrit = "a.dRefernce»d.sClientNm»a.sReferNox»c.sDescript»a.dTransact»a.sTransNox";
-        String lsSQL = getSQ_POReceiving();
+        String lsHeader = "Trans No»Origin Branch»Refer Date»Supplier»Refer No»Inv. Type»Date";
+        String lsColName = "sTransNox»sBranchNm»dRefernce»sBranchNm»sClientNm»sReferNox»sDescript»dTransact";
+        String lsColCrit = "a.sTransNox»b.sBranchNm»a.dRefernce»d.sClientNm»a.sReferNox»c.sDescript»a.dTransact";
+        String lsSQL = MiscUtil.addCondition(getSQ_POReceiving(),
+                " LEFT(a.sTransNox,4) <> " + SQLUtil.toSQL(poGRider.getBranchCode())
+                + " AND b.cAutomate = '0'");
         JSONObject loJSON;
 
         System.out.println(lsSQL);
@@ -82,7 +84,7 @@ public class POReceivingOfflineBranch {
                 lsHeader,
                 lsColName,
                 lsColCrit,
-                fbByCode ? 2 : 1);
+                fbByCode ? 0 : 1);
 
         if (loJSON == null) {
             return false;
@@ -1511,7 +1513,7 @@ public class POReceivingOfflineBranch {
                 + " ON a.sInvTypCd = c.sInvTypCd"
                 + ", Client_Master d"
                 + " WHERE a.sSupplier = d.sClientID"
-                + " AND LEFT(a.sTransNox, 4) = " + SQLUtil.toSQL(poData.getBranchCd())
+                //                + " AND LEFT(a.sTransNox, 4) = " + SQLUtil.toSQL(poData.getBranchCd())
                 + " AND a.cTranStat = '1'";
     }
 
@@ -1804,18 +1806,20 @@ public class POReceivingOfflineBranch {
         switch (fnCol) {
             case 2: //sBranchCd
                 XMBranch loBranch = new XMBranch(poGRider, psBranchCd, true);
-                loJSON = searchBranchOrigin(fsValue, false);
+                loJSON = searchBranchOrigin(fsValue, fbByCode);
+                if (loJSON != null) {
+                    if (loBranch.openRecord((String) loJSON.get("sBranchCd"))) {
+                        setMaster(fnCol, (String) loBranch.getMaster("sBranchCd"));
+                        setMaster(4, (String) loBranch.getMaster("sCompnyID"));
+                        
+                        psBranchCd = (String) loBranch.getMaster("sBranchCd");
+                        String lsTransNox = MiscUtil.getNextCode(poData.getTable(), "sTransNox", true, loConn, psBranchCd);
+                        poData.setTransNox(lsTransNox);
 
-                if (loBranch.openRecord((String) loJSON.get("sBranchCd"))) {
-                    setMaster(fnCol, (String) loBranch.getMaster("sBranchCd"));
-                    setMaster(4, (String) loBranch.getMaster("sCompnyID"));
-
-                    psBranchCd = (String) loBranch.getMaster("sBranchCd");
-                    String lsTransNox = MiscUtil.getNextCode(poData.getTable(), "sTransNox", true, loConn, psBranchCd);
-                    poData.setTransNox(lsTransNox);
-                    MasterRetreived(fnCol);
-                    MasterRetreived(1);
-                    return true;
+                        MasterRetreived(1);
+//                        MasterRetreived(fnCol);
+                        return true;
+                    }
                 }
                 break;
             case 5: //sSupplier
