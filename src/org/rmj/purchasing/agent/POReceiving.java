@@ -517,15 +517,9 @@ public class POReceiving {
             setMessage("Invalid Reference No detected.");
             return false;
         }
-        if (pnEditMode == EditMode.ADDNEW) {
+        if (pnEditMode != EditMode.ADDNEW || pnEditMode != EditMode.UPDATE) {
             if (!checkReferNox(loNewEnt.getTransNox(), loNewEnt.getReferNo())) {
                 return false;
-            }
-        } else {
-            if (loNewEnt.getReferNo() != poData.getReferNo()) {
-                if (!checkReferNox(loNewEnt.getTransNox(), loNewEnt.getReferNo())) {
-                    return false;
-                }
             }
         }
         if (loNewEnt.getReferDate() == null) {
