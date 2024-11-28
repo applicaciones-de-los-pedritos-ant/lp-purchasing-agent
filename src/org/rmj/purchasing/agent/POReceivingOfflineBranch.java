@@ -52,16 +52,16 @@ import org.rmj.lp.parameter.agent.XMInventoryType;
 import org.rmj.lp.parameter.agent.XMSupplier;
 import org.rmj.lp.parameter.agent.XMTerm;
 
-public class POReceiving {
+public class POReceivingOfflineBranch {
 
     private final String MODULENAME = "PurchaseOrder";
 
-    public POReceiving(GRider foGRider, String fsBranchCD, boolean fbWithParent) {
+    public POReceivingOfflineBranch(GRider foGRider, String fsBranchCD, boolean fbWithParent) {
         this.poGRider = foGRider;
 
         if (foGRider != null) {
             this.pbWithParent = fbWithParent;
-            this.psBranchCd = fsBranchCD;
+//            this.psBranchCd = fsBranchCD;
 
             this.psUserIDxx = foGRider.getUserID();
             pnEditMode = EditMode.UNKNOWN;
@@ -69,10 +69,12 @@ public class POReceiving {
     }
 
     public boolean BrowseRecord(String fsValue, boolean fbByCode) {
-        String lsHeader = "Refer Date»Supplier»Refer No»Inv. Type»Date»Trans No";
-        String lsColName = "dRefernce»sClientNm»sReferNox»sDescript»dTransact»sTransNox";
-        String lsColCrit = "a.dRefernce»d.sClientNm»a.sReferNox»c.sDescript»a.dTransact»a.sTransNox";
-        String lsSQL = getSQ_POReceiving();
+        String lsHeader = "Trans No»Origin Branch»Refer Date»Supplier»Refer No»Inv. Type»Date";
+        String lsColName = "sTransNox»sBranchNm»dRefernce»sBranchNm»sClientNm»sReferNox»sDescript»dTransact";
+        String lsColCrit = "a.sTransNox»b.sBranchNm»a.dRefernce»d.sClientNm»a.sReferNox»c.sDescript»a.dTransact";
+        String lsSQL = MiscUtil.addCondition(getSQ_POReceiving(),
+                " LEFT(a.sTransNox,4) <> " + SQLUtil.toSQL(poGRider.getBranchCode())
+                + " AND b.cAutomate = '0'");
         JSONObject loJSON;
 
         System.out.println(lsSQL);
@@ -82,7 +84,7 @@ public class POReceiving {
                 lsHeader,
                 lsColName,
                 lsColCrit,
-                fbByCode ? 2 : 1);
+                fbByCode ? 0 : 1);
 
         if (loJSON == null) {
             return false;
@@ -343,7 +345,6 @@ public class POReceiving {
         loConn = setConnection();
 
         poData = new UnitPOReceivingMaster();
-        poData.setTransNox(MiscUtil.getNextCode(poData.getTable(), "sTransNox", true, loConn, psBranchCd));
         poData.setDateTransact(poGRider.getServerDate());
 
         //init detail
@@ -498,6 +499,10 @@ public class POReceiving {
             return false;
         }
 
+        if (loNewEnt.getTransNox() == null || loNewEnt.getTransNox().isEmpty()) {
+            setMessage("Invalid Transaction No detected.");
+            return false;
+        }
         if (loNewEnt.getDateTransact() == null) {
             setMessage("Invalid transact date detected.");
             return false;
@@ -731,8 +736,8 @@ public class POReceiving {
         loConn = setConnection();
 
         lsSQL = MiscUtil.addCondition(lsSQL, "sTransNox != " + SQLUtil.toSQL(fsTransNox));
-        lsSQL = MiscUtil.addCondition(lsSQL, "sReferNox = " + SQLUtil.toSQL(poGRider.getBranchCode()));
-        lsSQL = MiscUtil.addCondition(lsSQL, "sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()));
+        lsSQL = MiscUtil.addCondition(lsSQL, "sReferNox = " + SQLUtil.toSQL(poData.getBranchCd()));
+        lsSQL = MiscUtil.addCondition(lsSQL, "sBranchCd = " + SQLUtil.toSQL(poData.getBranchCd()));
         ResultSet loRS = poGRider.executeQuery(lsSQL);
 
         try {
@@ -1015,7 +1020,7 @@ public class POReceiving {
         String lsStockID = "";
         String lsSQL = "";
 
-        InventoryTrans loInvTrans = new InventoryTrans(poGRider, poGRider.getBranchCode());
+        InventoryTrans loInvTrans = new InventoryTrans(poGRider, poData.getBranchCd());
         loInvTrans.InitTransaction();
 
         for (int lnCtr = 0; lnCtr <= paDetail.size() - 1; lnCtr++) {
@@ -1045,7 +1050,7 @@ public class POReceiving {
         String lsSQL = "";
         ResultSet loRS = null;
 
-        InventoryTrans loInvTrans = new InventoryTrans(poGRider, poGRider.getBranchCode());
+        InventoryTrans loInvTrans = new InventoryTrans(poGRider, poData.getBranchCd());
         loInvTrans.InitTransaction();
 
         for (int lnCtr = 0; lnCtr <= paDetail.size() - 1; lnCtr++) {
@@ -1102,7 +1107,7 @@ public class POReceiving {
         String lsOrderNo = "";
         String lsSQL = "";
 
-        InventoryTrans loInvTrans = new InventoryTrans(poGRider, poGRider.getBranchCode());
+        InventoryTrans loInvTrans = new InventoryTrans(poGRider, poData.getBranchCd());
         loInvTrans.InitTransaction();
 
         for (int lnCtr = 0; lnCtr <= paDetail.size() - 1; lnCtr++) {
@@ -1137,7 +1142,7 @@ public class POReceiving {
     }
 
     private boolean saveInvExpiration(Date fdTransact) {
-        InvExpiration loInvTrans = new InvExpiration(poGRider, poGRider.getBranchCode());
+        InvExpiration loInvTrans = new InvExpiration(poGRider, poData.getBranchCd());
         loInvTrans.InitTransaction();
 
         for (int lnCtr = 0; lnCtr <= paDetail.size() - 1; lnCtr++) {
@@ -1164,7 +1169,7 @@ public class POReceiving {
         String lsStockID = "";
         String lsSQL = "";
         Inventory loInventory;
-        InventoryTrans loInvTrans = new InventoryTrans(poGRider, poGRider.getBranchCode());
+        InventoryTrans loInvTrans = new InventoryTrans(poGRider, poData.getBranchCd());
         loInvTrans.InitTransaction();
 
         for (int lnCtr = 0; lnCtr <= paDetail.size() - 1; lnCtr++) {
@@ -1241,7 +1246,7 @@ public class POReceiving {
                 if (getDetail(fnRow, "sOrderNox").equals("")) {
                     lsSQL = MiscUtil.addCondition(getSQ_Inventory(), "a.cRecdStat = "
                             + SQLUtil.toSQL(RecordStatus.ACTIVE) + " AND sBranchCd = "
-                            + SQLUtil.toSQL(poGRider.getBranchCode()));
+                            + SQLUtil.toSQL(poData.getBranchCd()));
                 } else {
                     lsSQL = MiscUtil.addCondition(getSQ_Stocks((String) getDetail(fnRow, "sOrderNox")), "a.cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
                 }
@@ -1508,7 +1513,7 @@ public class POReceiving {
                 + " ON a.sInvTypCd = c.sInvTypCd"
                 + ", Client_Master d"
                 + " WHERE a.sSupplier = d.sClientID"
-//                + " AND LEFT(a.sTransNox, 4) = " + SQLUtil.toSQL(poGRider.getBranchCode())
+                //                + " AND LEFT(a.sTransNox, 4) = " + SQLUtil.toSQL(poData.getBranchCd())
                 + " AND a.cTranStat = '1'";
     }
 
@@ -1642,7 +1647,7 @@ public class POReceiving {
                 + " ON a.sInvTypCd = c.sInvTypCd"
                 + ", Client_Master d"
                 + " WHERE a.sSupplier = d.sClientID"
-                + " AND LEFT(a.sTransNox, 4) = " + SQLUtil.toSQL(poGRider.getBranchCode()), lsCondition);
+                + " AND b.cAutomate = " + SQLUtil.toSQL(RecordStatus.INACTIVE), lsCondition);
     }
 
     public String getSQ_ReceivingMaster() {
@@ -1680,104 +1685,6 @@ public class POReceiving {
                 + ", sModified"
                 + ", dModified"
                 + " FROM PO_Receiving_Master";
-    }
-
-//    private String getSQ_POMaster(){
-//        String lsTranStat = String.valueOf(pnTranStat);
-//        String lsCondition = "";
-//        String lsSQL =  "SELECT" +
-//                    "  sTransNox" +
-//                    ", sBranchCd" +
-//                    ", dTransact" +
-//                    ", sCompnyID" +
-//                    ", sDestinat" +
-//                    ", sSupplier" +
-//                    ", sReferNox" +
-//                    ", sTermCode" +
-//                    ", nTranTotl" +
-//                    ", sRemarksx" +
-//                    ", sSourceNo" +
-//                    ", sSourceCd" +
-//                    ", cEmailSnt" +
-//                    ", nEmailSnt" +
-//                    ", nEntryNox" +
-//                    ", sInvTypCd" +
-//                    ", cTranStat" +
-//                    ", sPrepared" +
-//                    ", dPrepared" +
-//                    ", sApproved" +
-//                    ", dApproved" +
-//                    ", sAprvCode" +
-//                    ", sPostedxx" +
-//                    ", dPostedxx" +
-//                    ", sModified" +
-//                    ", dModified" +
-//                        " FROM PO_Master a" + 
-//                        " WHERE sTransNox LIKE " + SQLUtil.toSQL(psBranchCd + "%");
-//        
-//        if (lsTranStat.length() == 1) {
-//            lsCondition = "cTranStat = " + SQLUtil.toSQL(lsTranStat);
-//        } else {
-//            for (int lnCtr = 0; lnCtr <= lsTranStat.length() -1; lnCtr++){
-//                lsCondition = lsCondition + SQLUtil.toSQL(String.valueOf(lsTranStat.charAt(lnCtr))) + ",";
-//            }
-//            lsCondition = "(" + lsCondition.substring(0, lsCondition.length()-1) + ")";
-//            lsCondition = "cTranStat IN " + lsCondition;
-//        }
-//        
-//        lsSQL = MiscUtil.addCondition(lsSQL, lsCondition);
-//        return lsSQL;
-//    }
-    private String getSQ_Stocks() {
-        String lsSQL = "SELECT "
-                + "  a.sStockIDx"
-                + ", a.sBarCodex"
-                + ", a.sDescript"
-                + ", a.sBriefDsc"
-                + ", a.sAltBarCd"
-                + ", a.sCategCd1"
-                + ", a.sCategCd2"
-                + ", a.sCategCd3"
-                + ", a.sCategCd4"
-                + ", a.sBrandCde"
-                + ", a.sModelCde"
-                + ", a.sColorCde"
-                + ", a.sInvTypCd"
-                + ", a.nUnitPrce"
-                + ", a.nSelPrice"
-                + ", a.nDiscLev1"
-                + ", a.nDiscLev2"
-                + ", a.nDiscLev3"
-                + ", a.nDealrDsc"
-                + ", a.cComboInv"
-                + ", a.cWthPromo"
-                + ", a.cSerialze"
-                + ", a.cUnitType"
-                + ", a.cInvStatx"
-                + ", a.sSupersed"
-                + ", a.cRecdStat"
-                + ", b.sDescript xBrandNme"
-                + ", c.sDescript xModelNme"
-                + ", d.sDescript xInvTypNm"
-                + ", f.sMeasurNm"
-                + ", IFNULL(e.nQtyOnHnd,0) nQtyOnHnd"
-                + " FROM Inventory a"
-                + " LEFT JOIN Brand b"
-                + " ON a.sBrandCde = b.sBrandCde"
-                + " LEFT JOIN Model c"
-                + " ON a.sModelCde = c.sModelCde"
-                + " LEFT JOIN Inv_Type d"
-                + " ON a.sInvTypCd = d.sInvTypCd"
-                + " LEFT JOIN Measure f"
-                + " ON a.sMeasurID = f.sMeasurID"
-                + ", Inv_Master e"
-                + " WHERE a.sStockIDx = e.sStockIDx"
-                + " AND e.sBranchCd = " + SQLUtil.toSQL(psBranchCd);
-        if (!System.getProperty("store.inventory.type").isEmpty()) {
-            lsSQL = MiscUtil.addCondition(lsSQL, "a.sInvTypCd IN " + CommonUtils.getParameter(System.getProperty("store.inventory.type")));
-        }
-
-        return lsSQL;
     }
 
     private String getPODetail(String fsOrderNox) {
@@ -1891,14 +1798,28 @@ public class POReceiving {
     }
 
     public boolean SearchMaster(int fnCol, String fsValue, boolean fbByCode) {
+
+        Connection loConn = null;
+        loConn = setConnection();
+
+        JSONObject loJSON;
         switch (fnCol) {
             case 2: //sBranchCd
                 XMBranch loBranch = new XMBranch(poGRider, psBranchCd, true);
-                if (loBranch.browseRecord(fsValue, fbByCode)) {
-                    setMaster(fnCol, (String) loBranch.getMaster("sBranchCd"));
-                    setMaster(4, (String) loBranch.getMaster("sCompnyID"));
-                    MasterRetreived(fnCol);
-                    return true;
+                loJSON = searchBranchOrigin(fsValue, fbByCode);
+                if (loJSON != null) {
+                    if (loBranch.openRecord((String) loJSON.get("sBranchCd"))) {
+                        setMaster(fnCol, (String) loBranch.getMaster("sBranchCd"));
+                        setMaster(4, (String) loBranch.getMaster("sCompnyID"));
+                        
+                        psBranchCd = (String) loBranch.getMaster("sBranchCd");
+                        String lsTransNox = MiscUtil.getNextCode(poData.getTable(), "sTransNox", true, loConn, psBranchCd);
+                        poData.setTransNox(lsTransNox);
+
+                        MasterRetreived(1);
+//                        MasterRetreived(fnCol);
+                        return true;
+                    }
                 }
                 break;
             case 5: //sSupplier
@@ -1940,7 +1861,7 @@ public class POReceiving {
                 String lsColCrit = "a.sTransNox»d.sClientNm»a.sReferNox»a.dTransact";
                 String lsSQL = getSQ_Purchases();
 
-                JSONObject loJSON = showFXDialog.jsonSearch(poGRider,
+                loJSON = showFXDialog.jsonSearch(poGRider,
                         lsSQL,
                         fsValue,
                         lsHeader,
@@ -1972,6 +1893,31 @@ public class POReceiving {
         }
 
         return false;
+    }
+
+    public JSONObject searchBranchOrigin(String fsValue, boolean fbByCode) {
+        String lsHeader = "Branch Code»Description»Company ID»Company";
+        String lsColName = "sBranchCd»sBranchNm»sCompnyID»sCompnyNm";
+        String lsColCrit = "a.sBranchCd»a.sBranchNm»a.sCompnyID»b.sCompnyNm";
+        String lsSQL = "SELECT "
+                + "  a.sBranchCd"
+                + ", a.sBranchNm"
+                + ", a.sCompnyID"
+                + ", b.sCompnyNm"
+                + " FROM Branch a"
+                + " LEFT JOIN Company b"
+                + " ON a.sCompnyID = b.sCompnyID"
+                + " WHERE a.cAutomate = '0' ";
+
+        JSONObject loJSON = showFXDialog.jsonSearch(poGRider,
+                lsSQL,
+                fsValue,
+                lsHeader,
+                lsColName,
+                lsColCrit,
+                fbByCode ? 0 : 1);
+
+        return loJSON;
     }
 
     public boolean SearchMaster(String fsCol, String fsValue, boolean fbByCode) {
