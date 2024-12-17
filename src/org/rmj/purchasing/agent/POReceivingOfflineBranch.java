@@ -70,7 +70,7 @@ public class POReceivingOfflineBranch {
 
     public boolean BrowseRecord(String fsValue, boolean fbByCode) {
         String lsHeader = "Trans No»Origin Branch»Refer Date»Supplier»Refer No»Inv. Type»Date";
-        String lsColName = "sTransNox»sBranchNm»dRefernce»sBranchNm»sClientNm»sReferNox»sDescript»dTransact";
+        String lsColName = "sTransNox»sBranchNm»dRefernce»sClientNm»sReferNox»sDescript»dTransact";
         String lsColCrit = "a.sTransNox»b.sBranchNm»a.dRefernce»d.sClientNm»a.sReferNox»c.sDescript»a.dTransact";
         String lsSQL = MiscUtil.addCondition(getSQ_POReceiving(),
                 " LEFT(a.sTransNox,4) <> " + SQLUtil.toSQL(poGRider.getBranchCode())
