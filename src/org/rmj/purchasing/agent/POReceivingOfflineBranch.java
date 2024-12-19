@@ -626,11 +626,7 @@ public class POReceivingOfflineBranch {
                     || paDetail.get(lnCtr).getQuantity().doubleValue() == 0.00) {
                 setMessage("Detail might not have item or zero quantity.");
                 return false;
-            } else if (paDetail.get(lnCtr).getOrderNox().equals("")
-                    || paDetail.get(lnCtr).getOrderNox().isEmpty()) {
-                setMessage("Detail might not have order no.");
-                return false;
-            }
+            } 
         }
 
         if (pnEditMode == EditMode.ADDNEW) {
