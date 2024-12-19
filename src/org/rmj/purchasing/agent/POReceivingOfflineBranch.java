@@ -1245,8 +1245,7 @@ public class POReceivingOfflineBranch {
 
                 if (getDetail(fnRow, "sOrderNox").equals("")) {
                     lsSQL = MiscUtil.addCondition(getSQ_Inventory(), "a.cRecdStat = "
-                            + SQLUtil.toSQL(RecordStatus.ACTIVE) + " AND sBranchCd = "
-                            + SQLUtil.toSQL(poData.getBranchCd()));
+                            + SQLUtil.toSQL(RecordStatus.ACTIVE));
                 } else {
                     lsSQL = MiscUtil.addCondition(getSQ_Stocks((String) getDetail(fnRow, "sOrderNox")), "a.cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
                 }
@@ -1260,11 +1259,12 @@ public class POReceivingOfflineBranch {
 
                 if (fbByCode) {
                     lsSQL = MiscUtil.addCondition(lsSQL, "a.sStockIDx = " + SQLUtil.toSQL(fsValue));
-
+                    System.out.println(lsSQL);
                     loRS = poGRider.executeQuery(lsSQL);
 
                     loJSON = showFXDialog.jsonBrowse(poGRider, loRS, lsHeader, lsColName);
                 } else {
+                    System.out.println(lsSQL);
                     loJSON = showFXDialog.jsonSearch(poGRider,
                             lsSQL,
                             fsValue,
@@ -1423,7 +1423,8 @@ public class POReceivingOfflineBranch {
                 + " LEFT JOIN Measure f"
                 + " ON a.sMeasurID = f.sMeasurID"
                 + " LEFT JOIN Inv_Master e"
-                + " ON a.sStockIDx = e.sStockIDx";
+                + " ON a.sStockIDx = e.sStockIDx" 
+                + " GROUP BY a.sStockIDx ";
 
         if (!System.getProperty("store.inventory.type").isEmpty()) {
             lsSQL = MiscUtil.addCondition(lsSQL, " a.sInvTypCd IN " + CommonUtils.getParameter(System.getProperty("store.inventory.type")));
@@ -1482,7 +1483,7 @@ public class POReceivingOfflineBranch {
                 + " AND g.sTransNox = h.sTransNox"
                 + " AND h.sStockIDx = e.sStockIDx"
                 + " AND g.sTransNox = " + SQLUtil.toSQL(fsOrderNox)
-                + " AND e.sBranchCd = " + SQLUtil.toSQL(psBranchCd);
+                + " GROUP BY e.sStockIDx " ;
     }
 
     private String getSQ_Purchases() {
