@@ -1011,35 +1011,7 @@ public class POReceivingOfflineBranch {
         return lbResult;
     }
 
-    //Added methods
-    private boolean saveInvAvgCost() {
-        String lsStockID = "";
-        String lsSQL = "";
 
-        InventoryTrans loInvTrans = new InventoryTrans(poGRider, poData.getBranchCd());
-        loInvTrans.InitTransaction();
-
-        for (int lnCtr = 0; lnCtr <= paDetail.size() - 1; lnCtr++) {
-            if (paDetail.get(lnCtr).getStockID().equals("")) {
-                break;
-            }
-
-            lsStockID = paDetail.get(lnCtr).getStockID();
-            if (!lsStockID.equals("")) {
-                lsSQL = "UPDATE Inv_Master SET"
-                        + "  nAvgCostx = + " + computeUnitPrice(paDetail.get(lnCtr))
-                        + " WHERE sStockIDx = " + SQLUtil.toSQL(lsStockID)
-                        + " AND sBranchCd = " + SQLUtil.toSQL(psBranchCd);
-
-                if (poGRider.executeQuery(lsSQL, "Inv_Master", psBranchCd, "") <= 0) {
-                    setMessage("Unable to update inventory average cost.");
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    }
 
     private boolean saveInvTrans(String fsTransNox, String fsSupplier, Date fdTransact) {
         String lsOrderNo = "";
@@ -1192,7 +1164,7 @@ public class POReceivingOfflineBranch {
             }
         }
 
-        return saveInvAvgCost();
+        return true;
     }
 
     public boolean SearchDetail(int fnRow, int fnCol, String fsValue, boolean fbSearch, boolean fbByCode) {
