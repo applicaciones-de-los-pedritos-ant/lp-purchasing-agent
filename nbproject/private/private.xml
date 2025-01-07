@@ -9,5 +9,10 @@
             <file>file:/C:/Users/Maynard/Documents/GitHub/lp-purchasing-agent/src/org/rmj/purchasing/agent/XMPurchaseOrder.java</file>
         </group>
         <group name="integsys-lp"/>
+        <group name="LP Integsys"/>
+        <group name="Incentive System">
+            <file>file:/D:/GMC_SEG_Folder%20-%20Maven/applicaciones-de-los-pedritos-ant/lp-purchasing-agent/src/org/rmj/purchasing/agent/AutoVoidTrans.java</file>
+        </group>
+        <group name="LP Integsys - She"/>
     </open-files>
 </project-private>

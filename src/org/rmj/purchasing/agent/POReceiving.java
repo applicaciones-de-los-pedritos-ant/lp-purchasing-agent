@@ -517,7 +517,7 @@ public class POReceiving {
             setMessage("Invalid Reference No detected.");
             return false;
         }
-        if (pnEditMode != EditMode.ADDNEW) {
+        if (pnEditMode == EditMode.ADDNEW || pnEditMode == EditMode.UPDATE) {
             if (!checkReferNox(loNewEnt.getTransNox(), loNewEnt.getReferNo())) {
                 return false;
             }
@@ -731,12 +731,12 @@ public class POReceiving {
         loConn = setConnection();
 
         lsSQL = MiscUtil.addCondition(lsSQL, "sTransNox != " + SQLUtil.toSQL(fsTransNox));
-        lsSQL = MiscUtil.addCondition(lsSQL, "sReferNox = " + SQLUtil.toSQL(poGRider.getBranchCode()));
+        lsSQL = MiscUtil.addCondition(lsSQL, "sReferNox = " + SQLUtil.toSQL(getMaster("sReferNox")));
         lsSQL = MiscUtil.addCondition(lsSQL, "sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()));
         ResultSet loRS = poGRider.executeQuery(lsSQL);
-
+        System.out.println(lsSQL);
         try {
-            if (!loRS.next()) {
+            if (loRS.next()) {
                 setMessage("Reference No already exist!!!");
                 return false;
             }
