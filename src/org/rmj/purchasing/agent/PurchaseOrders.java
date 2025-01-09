@@ -1377,17 +1377,17 @@ public class PurchaseOrders {
             }
             
             
-//            params.put("sApprval2", "");
+            params.put("sApprval2", "");
 
-            lsSQL = "SELECT sClientNm FROM Client_Master WHERE sClientID IN (" +
-                        "SELECT sEmployNo FROM xxxSysUser WHERE sUserIDxx = " + SQLUtil.toSQL(poData.getApprovedBy()) + ")";
-            loRS = poGRider.executeQuery(lsSQL);
-            
-            if (loRS.next()){
-                params.put("sApprval2", loRS.getString("sClientNm"));
-            } else {
-                params.put("sApprval2", "");
-            }
+//            lsSQL = "SELECT sClientNm FROM Client_Master WHERE sClientID IN (" +
+//                        "SELECT sEmployNo FROM xxxSysUser WHERE sUserIDxx = " + SQLUtil.toSQL(poData.getApprovedBy()) + ")";
+//            loRS = poGRider.executeQuery(lsSQL);
+//            
+//            if (loRS.next()){
+//                params.put("sApprval2", loRS.getString("sClientNm"));
+//            } else {
+//                params.put("sApprval2", "");
+//            }
             params.put("xRemarksx", poData.getRemarks());
 
             JSONArray loArray = new JSONArray();
