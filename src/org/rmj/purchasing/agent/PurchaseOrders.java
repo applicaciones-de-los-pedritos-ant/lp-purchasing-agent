@@ -478,7 +478,7 @@ public class PurchaseOrders {
 
             for (lnCtr = 0; lnCtr <= paDetail.size() - 1; lnCtr++) {
                 loNewEnt = paDetail.get(lnCtr);
-                
+
                 if (!loNewEnt.getStockID().equals("")) {
                     loNewEnt.setTransNox(fsTransNox);
                     loNewEnt.setEntryNox(lnCtr + 1);
@@ -1366,19 +1366,58 @@ public class PurchaseOrders {
                 params.put("xSupplier", "NOT SPECIFIED");
             }
 
-            lsSQL = "SELECT sClientNm FROM Client_Master WHERE sClientID IN ("
-                    + "SELECT sEmployNo FROM xxxSysUser WHERE sUserIDxx = " + SQLUtil.toSQL(poData.getApprovedBy().isEmpty() ? poData.getPreparedBy() : poData.getApprovedBy()) + ")";
+            params.put("sApprval1", "-");
+            params.put("sApprval2", "-");
+            params.put("sApprval3", "-");
+
+            lsSQL = "SELECT"
+                    + "  a.sTransNox"
+                    + ", b.sClientNm"
+                    + " FROM Tokenized_Approval_Request a"
+                    + " LEFT JOIN Client_Master b"
+                    + " ON a.sReqstdTo = b.sClientID"
+                    + " WHERE a.cTranStat = '1'"
+                    + " AND a.sSourceCd = 'PO'"
+                    + " AND a.sRqstType = 'LP'"
+                    + " AND a.sSourceNo = " + SQLUtil.toSQL(poData.getTransNox())
+                    + " ORDER BY a.dApproved"
+                    + " LIMIT 3";
+
             loRS = poGRider.executeQuery(lsSQL);
 
-            if (loRS.next()) {
-                params.put("sApprval1", loRS.getString("sClientNm"));
-            } else {
-                params.put("sApprval1", "");
+            try {
+                int lnCtr = 0;
+                while (loRS.next()) {
+                    switch (lnCtr) {
+                        case 0:
+                            params.put("sApprval1", loRS.getString("sTransNox") + " - " + loRS.getString("sClientNm"));
+                            break;
+                        case 1:
+                            params.put("sApprval2", loRS.getString("sTransNox") + " - " + loRS.getString("sClientNm"));
+                            break;
+                        default:
+                            params.put("sApprval3", loRS.getString("sTransNox") + " - " + loRS.getString("sClientNm"));
+                            break;
+                    }
+                    lnCtr++;
+                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                return false;
             }
-            
-            
-            params.put("sApprval2", "");
 
+//            lsSQL = "SELECT sClientNm FROM Client_Master WHERE sClientID IN ("
+//                    + "SELECT sEmployNo FROM xxxSysUser WHERE sUserIDxx = " + SQLUtil.toSQL(poData.getApprovedBy().isEmpty() ? poData.getPreparedBy() : poData.getApprovedBy()) + ")";
+//            loRS = poGRider.executeQuery(lsSQL);
+//
+//            if (loRS.next()) {
+//                params.put("sApprval1", loRS.getString("sClientNm"));
+//            } else {
+//                params.put("sApprval1", "");
+//            }
+//            
+//            
+//            params.put("sApprval2", "");
 //            lsSQL = "SELECT sClientNm FROM Client_Master WHERE sClientID IN (" +
 //                        "SELECT sEmployNo FROM xxxSysUser WHERE sUserIDxx = " + SQLUtil.toSQL(poData.getApprovedBy()) + ")";
 //            loRS = poGRider.executeQuery(lsSQL);
@@ -1427,7 +1466,7 @@ public class PurchaseOrders {
             jv.setVisible(true);
             jv.setAlwaysOnTop(true);
         } catch (JRException | UnsupportedEncodingException | SQLException ex) {
-            Logger.getLogger(XMPOReceiving.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(PurchaseOrders.class.getName()).log(Level.SEVERE, null, ex);
             return false;
         }
 
