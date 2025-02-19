@@ -165,6 +165,10 @@ public class POReceiving {
             case 102: //sMeasurNm
                 paDetailOthers.get(fnRow).setValue("sMeasurNm", foData);
                 break;
+
+            case 103: //nOrdrQtyx / po order qty
+                paDetailOthers.get(fnRow).setValue("nOrdrQtyx", foData);
+                break;
             default:
                 paDetail.get(fnRow).setValue(fnCol, foData);
         }
@@ -214,6 +218,9 @@ public class POReceiving {
             case "sMeasurNm":
                 setDetail(fnRow, 102, foData);
                 break;
+            case "nOrdrQtyx":
+                setDetail(fnRow, 103, foData);
+                break;
             default:
                 paDetail.get(fnRow).setValue(fsCol, foData);
         }
@@ -227,6 +234,8 @@ public class POReceiving {
             case 101:
             case 102:
                 return paDetailOthers.get(fnRow).getValue("sMeasurNm");
+            case 103:
+                return paDetailOthers.get(fnRow).getValue("nOrdrQtyx");
             default:
                 return paDetail.get(fnRow).getValue(fnCol);
 
@@ -241,6 +250,8 @@ public class POReceiving {
                 return getDetail(fnRow, 101);
             case "sMeasurNm":
                 return getDetail(fnRow, 102);
+            case "nOrdrQtyx":
+                return getDetail(fnRow, 103);
             default:
                 return paDetail.get(fnRow).getValue(fsCol);
         }
@@ -423,7 +434,10 @@ public class POReceiving {
 
         ResultSet loRS = poGRider.executeQuery(
                 MiscUtil.addCondition(getSQ_Detail(),
-                        "sTransNox = " + SQLUtil.toSQL(fsTransNox)));
+                        "a.sTransNox = " + SQLUtil.toSQL(fsTransNox)));
+
+        System.out.println(MiscUtil.addCondition(getSQ_Detail(),
+                "a.sTransNox = " + SQLUtil.toSQL(fsTransNox)));
         try {
             for (int lnCtr = 1; lnCtr <= MiscUtil.RecordCount(loRS); lnCtr++) {
                 loRS.absolute(lnCtr);
@@ -450,8 +464,9 @@ public class POReceiving {
                 loOth.setValue("xQtyOnHnd", loRS.getObject("xQtyOnHnd"));
                 loOth.setValue("nResvOrdr", loRS.getObject("nResvOrdr"));
                 loOth.setValue("nBackOrdr", loRS.getObject("nBackOrdr"));
+                loOth.setValue("nBackOrdr", loRS.getObject("nBackOrdr"));
                 loOth.setValue("nReorderx", 0);
-                loOth.setValue("nLedgerNo", loRS.getInt("nLedgerNo"));
+                loOth.setValue("nOrdrQtyx", loRS.getObject("nOrdrQtyx"));
                 if (loRS.getString("sMeasurNm") != null) {
                     loOth.setValue("sMeasurNm", loRS.getString("sMeasurNm"));
                 } else {
@@ -1206,100 +1221,134 @@ public class POReceiving {
         setErrMsg("");
         setMessage("");
 
-        switch (fnCol) {
-            case 3:
-                lsHeader = "Order No»Supplier»Refer No»Date";
-                lsColName = "sTransNox»sClientNm»sReferNox»dTransact";
-                lsColCrit = "a.sTransNox»d.sClientNm»a.sReferNox»a.dTransact";
-                lsSQL = getSQ_Purchases();
+        try {
+            switch (fnCol) {
+                case 3:
+                    lsHeader = "Order No»Supplier»Refer No»Date";
+                    lsColName = "sTransNox»sClientNm»sReferNox»dTransact";
+                    lsColCrit = "a.sTransNox»d.sClientNm»a.sReferNox»a.dTransact";
+                    lsSQL = getSQ_Purchases();
 
-                loJSON = showFXDialog.jsonSearch(poGRider,
-                        lsSQL,
-                        fsValue,
-                        lsHeader,
-                        lsColName,
-                        lsColCrit,
-                        fbByCode ? 0 : 2);
-
-                if (loJSON != null) {
-                    setDetail(fnRow, fnCol, (String) loJSON.get("sTransNox"));
-                    return true;
-                } else {
-                    setDetail(fnRow, fnCol, "");
-                    return false;
-                }
-            case 4:
-            case 5:
-//                lsHeader = "Brand»Description»Unit»Model»Inv. Type»Barcode»Stock ID";
-//                lsColName = "xBrandNme»sDescript»sMeasurNm»xModelNme»xInvTypNm»sBarCodex»sStockIDx";
-//                lsColCrit = "b.sDescript»a.sDescript»f.sMeasurNm»c.sDescript»d.sDescript»a.sBarCodex»a.sStockIDx";
-
-                lsHeader = "Barcode»Description»Brand»Unit»Qty. On-Hand»Model»Inv. Type»Stock ID";
-                lsColName = "sBarCodex»sDescript»xBrandNme»sMeasurNm»nQtyOnHnd»xModelNme»xInvTypNm»sStockIDx";
-                lsColCrit = "a.sBarCodex»a.sDescript»b.sDescript»f.sMeasurNm»e.nQtyOnHnd»c.sDescript»d.sDescript»a.sStockIDx";
-
-                if (getDetail(fnRow, "sOrderNox").equals("")) {
-                    lsSQL = MiscUtil.addCondition(getSQ_Inventory(), "a.cRecdStat = "
-                            + SQLUtil.toSQL(RecordStatus.ACTIVE) + " AND sBranchCd = "
-                            + SQLUtil.toSQL(poGRider.getBranchCode()));
-                } else {
-                    lsSQL = MiscUtil.addCondition(getSQ_Stocks((String) getDetail(fnRow, "sOrderNox")), "a.cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
-                }
-
-                if (ItemCount() > 0) {
-                    for (int lnCtr = 0; lnCtr < ItemCount(); lnCtr++) {
-                        lsCondition += ", " + SQLUtil.toSQL(getDetail(lnCtr, "sStockIDx"));
-                    }
-                    lsCondition = " AND a.sStockIDx NOT IN (" + lsCondition.substring(2) + ") GROUP BY a.sStockIDx";
-                }
-
-                if (fbByCode) {
-                    lsSQL = MiscUtil.addCondition(lsSQL, "a.sStockIDx = " + SQLUtil.toSQL(fsValue));
-
-                    loRS = poGRider.executeQuery(lsSQL);
-
-                    loJSON = showFXDialog.jsonBrowse(poGRider, loRS, lsHeader, lsColName);
-                } else {
                     loJSON = showFXDialog.jsonSearch(poGRider,
                             lsSQL,
                             fsValue,
                             lsHeader,
                             lsColName,
                             lsColCrit,
-                            fbSearch ? 1 : 5);
-                }
+                            fbByCode ? 0 : 2);
 
-                if (loJSON != null) {
-                    setDetail(fnRow, fnCol, (String) loJSON.get("sStockIDx"));
-                    //delete the barcode and descript on temp table
-                    setDetail(fnRow, 100, (String) loJSON.get("sBarCodex"));
-                    setDetail(fnRow, 101, "");
-                    setDetail(fnRow, 102, "");
+                    if (loJSON != null) {
+                        //validate if already exist to restric same DR/SI
+                        lsSQL = MiscUtil.addCondition(getSQ_PurchasesDetail(), "sTransNox = " + SQLUtil.toSQL((String) loJSON.get("sTransNox")));
+                        if (ItemCount() > 0) {
+                            loRS = poGRider.executeQuery(lsSQL);
+                            loRS.beforeFirst();
+                            while (loRS.next()) {
+                                for (int lnCtr = 0; lnCtr < ItemCount(); lnCtr++) {
+                                    if (getDetail(lnCtr, "sOrderNox").toString().equalsIgnoreCase((String) loJSON.get("sTransNox"))) {
+                                        if (!getDetail(fnRow, "sStockIDx").toString().isEmpty()) {
+                                            if (getDetail(lnCtr, "sStockIDx").toString().equalsIgnoreCase(loRS.getString("sStockIDx")));
+                                            return false;
+                                        }
+                                    }
 
-                    setDetail(fnRow, "sBrandNme", (String) loJSON.get("xBrandNme"));
-                    setDetail(fnRow, "sMeasurNm", loJSON.get("sMeasurNm"));
-                    if (fnCol == 4) {
-                        setDetail(fnRow, "nUnitPrce", Double.valueOf((String) loJSON.get("nUnitPrce")));
+                                }
+                            }
+                            loRS.close();
+                        }
+                        setDetail(fnRow, fnCol, (String) loJSON.get("sTransNox"));
+                        return true;
+
+                    } else {
+                        setDetail(fnRow, fnCol, "");
+                        return false;
                     }
-                    if (loJSON.get("nQuantity") != null) {
-                        setDetail(fnRow, 7, Double.valueOf((String) loJSON.get("nQuantity")));
+                case 4:
+                case 5:
+//                lsHeader = "Brand»Description»Unit»Model»Inv. Type»Barcode»Stock ID";
+//                lsColName = "xBrandNme»sDescript»sMeasurNm»xModelNme»xInvTypNm»sBarCodex»sStockIDx";
+//                lsColCrit = "b.sDescript»a.sDescript»f.sMeasurNm»c.sDescript»d.sDescript»a.sBarCodex»a.sStockIDx";
+
+                    lsHeader = "Barcode»Description»Brand»Unit»Qty. On-Hand»Model»Inv. Type»Stock ID";
+                    lsColName = "sBarCodex»sDescript»xBrandNme»sMeasurNm»nQtyOnHnd»xModelNme»xInvTypNm»sStockIDx";
+                    lsColCrit = "a.sBarCodex»a.sDescript»b.sDescript»f.sMeasurNm»e.nQtyOnHnd»c.sDescript»d.sDescript»a.sStockIDx";
+
+                    if (getDetail(fnRow, "sOrderNox").equals("")) {
+                        lsSQL = MiscUtil.addCondition(getSQ_Inventory(), "a.cRecdStat = "
+                                + SQLUtil.toSQL(RecordStatus.ACTIVE) + " AND sBranchCd = "
+                                + SQLUtil.toSQL(poGRider.getBranchCode()));
+                    } else {
+                        //restrict loading same po and barcode
+                        lsSQL = MiscUtil.addCondition(getSQ_Stocks((String) getDetail(fnRow, "sOrderNox")), "a.cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
+
+                        if (ItemCount() > 0) {
+                            for (int lnCtr = 0; lnCtr < ItemCount(); lnCtr++) {
+                                lsCondition += ", " + SQLUtil.toSQL(getDetail(lnCtr, "sStockIDx"));
+                            }
+                            lsCondition = " AND a.sStockIDx NOT IN (" + lsCondition.substring(2) + ") GROUP BY a.sStockIDx";
+                            lsSQL = lsSQL + lsCondition;
+                        }
                     }
-                    return true;
-                } else {
-                    setDetail(fnRow, fnCol, "");
+
+//                if (ItemCount() > 0) {
+//                    for (int lnCtr = 0; lnCtr < ItemCount(); lnCtr++) {
+//                        lsCondition += ", " + SQLUtil.toSQL(getDetail(lnCtr, "sStockIDx"));
+//                    }
+//                    lsCondition = " AND a.sStockIDx NOT IN (" + lsCondition.substring(2) + ") GROUP BY a.sStockIDx";
+//                    lsSQL = lsSQL + lsCondition;
+//                }
+                    if (fbByCode) {
+                        lsSQL = MiscUtil.addCondition(lsSQL, "a.sStockIDx = " + SQLUtil.toSQL(fsValue));
+
+                        loRS = poGRider.executeQuery(lsSQL);
+
+                        loJSON = showFXDialog.jsonBrowse(poGRider, loRS, lsHeader, lsColName);
+                    } else {
+                        loJSON = showFXDialog.jsonSearch(poGRider,
+                                lsSQL,
+                                fsValue,
+                                lsHeader,
+                                lsColName,
+                                lsColCrit,
+                                fbSearch ? 1 : 5);
+                    }
+
+                    if (loJSON != null) {
+                        setDetail(fnRow, fnCol, (String) loJSON.get("sStockIDx"));
+                        //delete the barcode and descript on temp table
+                        setDetail(fnRow, 100, (String) loJSON.get("sBarCodex"));
+                        setDetail(fnRow, 101, "");
+                        setDetail(fnRow, 102, "");
+
+                        setDetail(fnRow, "sBrandNme", (String) loJSON.get("xBrandNme"));
+                        setDetail(fnRow, "sMeasurNm", loJSON.get("sMeasurNm"));
+                        if (fnCol == 4) {
+                            setDetail(fnRow, "nUnitPrce", Double.valueOf((String) loJSON.get("nUnitPrce")));
+                        }
+                        if (loJSON.get("nQuantity") != null) {
+                            setDetail(fnRow, "nOrdrQtyx", Double.valueOf((String) loJSON.get("nQuantity")));
+//                            setDetail(fnRow, 7, Double.valueOf((String) loJSON.get("nQuantity")));
+                        }
+                        return true;
+                    } else {
+                        setDetail(fnRow, fnCol, "");
 //                    //delete the barcode and descript on temp table
 //                    setDetail(fnRow, 100, "");
 //                    setDetail(fnRow, 101, "");
 //                    setDetail(fnRow, 102, "");
 //                    setDetail(fnRow, "sBrandNme", "");
 //                    
-                    if (fnCol == 4) {
-                        setDetail(fnRow, "nUnitPrce", 0.00);
+                        if (fnCol == 4) {
+                            setDetail(fnRow, "nUnitPrce", 0.00);
+                        }
+                        return false;
                     }
+                default:
                     return false;
-                }
-            default:
-                return false;
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(POReceiving.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
         }
     }
 
@@ -1508,8 +1557,15 @@ public class POReceiving {
                 + " ON a.sInvTypCd = c.sInvTypCd"
                 + ", Client_Master d"
                 + " WHERE a.sSupplier = d.sClientID"
-//                + " AND LEFT(a.sTransNox, 4) = " + SQLUtil.toSQL(poGRider.getBranchCode())
+                //                + " AND LEFT(a.sTransNox, 4) = " + SQLUtil.toSQL(poGRider.getBranchCode())
                 + " AND a.cTranStat = '1'";
+    }
+
+    private String getSQ_PurchasesDetail() {
+        return "SELECT "
+                + "  sTransNox"
+                + ", sStockIDx"
+                + " FROM PO_Detail ";
     }
 
     private String getSQ_Detail() {
@@ -1533,6 +1589,7 @@ public class POReceiving {
                 + ", IFNULL(b.nLedgerNo, 0) nLedgerNo"
                 + ", IFNULL(e.sMeasurNm, '') sMeasurNm"
                 + ", IFNULL(f.sDescript, '') sBrandNme"
+                + ",  IFNULL(g.nQuantity,0) nOrdrQtyx"
                 + " FROM PO_Receiving_Detail a"
                 + " LEFT JOIN Inventory d"
                 + " ON a.sReplacID = d.sStockIDx"
@@ -1545,6 +1602,9 @@ public class POReceiving {
                 + " ON c.sBrandCde = f.sBrandCde"
                 + " LEFT JOIN Measure e"
                 + " ON c.sMeasurID = e.sMeasurID"
+                + " LEFT JOIN PO_Detail g"
+                + " ON b.sStockIDx = g.sStockIDx"
+                + " AND  g.sTransNox =  a.sOrderNox"
                 + " ORDER BY a.nEntryNox";
     }
 
