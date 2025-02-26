@@ -1282,14 +1282,26 @@ public class POReceiving {
                         lsSQL = MiscUtil.addCondition(getSQ_Stocks((String) getDetail(fnRow, "sOrderNox")), "a.cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
 
                         if (ItemCount() > 0) {
-                            for (int lnCtr = 0; lnCtr < ItemCount(); lnCtr++) {
-                                lsCondition += ", " + SQLUtil.toSQL(getDetail(lnCtr, "sStockIDx"));
-                            }
-                            lsCondition = " AND a.sStockIDx NOT IN (" + lsCondition.substring(2) + ") GROUP BY a.sStockIDx";
-                            lsSQL = lsSQL + lsCondition;
-                        }
-                    }
+                            loRS = poGRider.executeQuery(getPODetail((String) getDetail(fnRow, "sOrderNox")));
+                            loRS.beforeFirst();
+                            while (loRS.next()) {
+                                for (int lnCtr = 0; lnCtr < ItemCount(); lnCtr++) {
+                                    if (!getDetail(lnCtr, "sOrderNox").toString().equalsIgnoreCase(getDetail(fnRow, "sOrderNox").toString())) {
+                                        continue;
+                                    }
+                                    if (!getDetail(lnCtr, "sStockIDx").toString().equalsIgnoreCase((String) loRS.getString("sStockIDx"))) {
+                                        lsCondition += ", " + SQLUtil.toSQL(getDetail(lnCtr, "sStockIDx"));
+                                    }
 
+                                }
+                            }
+                            if (!lsCondition.isEmpty()) {
+                                lsCondition = " AND a.sStockIDx NOT IN (" + lsCondition.substring(2) + ") GROUP BY a.sStockIDx";
+                                lsSQL = lsSQL + lsCondition;
+                            }
+                        }
+
+                    }
 //                if (ItemCount() > 0) {
 //                    for (int lnCtr = 0; lnCtr < ItemCount(); lnCtr++) {
 //                        lsCondition += ", " + SQLUtil.toSQL(getDetail(lnCtr, "sStockIDx"));
@@ -1341,8 +1353,13 @@ public class POReceiving {
                         if (fnCol == 4) {
                             setDetail(fnRow, "nUnitPrce", 0.00);
                         }
+                        if (!getDetail(fnRow, "sOrderNox").equals("")) {
+                            ShowMessageFX.Warning("Order No. has been fully consumed. No additional details can be added", "Warning", "No record loaded.");
+                        }
                         return false;
+
                     }
+
                 default:
                     return false;
             }
@@ -2109,9 +2126,11 @@ public class POReceiving {
                 params.put("sApprval1", loRS.getString("sClientNm"));
             } else {
                 params.put("sApprval1", "");
+
             }
         } catch (SQLException ex) {
-            Logger.getLogger(POReturn.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(POReturn.class
+                    .getName()).log(Level.SEVERE, null, ex);
         }
 
         params.put("sApprval2", "");
@@ -2153,8 +2172,10 @@ public class POReceiving {
             JasperViewer jv = new JasperViewer(jrprint, false);
             jv.setVisible(true);
             jv.setAlwaysOnTop(true);
+
         } catch (JRException | UnsupportedEncodingException ex) {
-            Logger.getLogger(XMPOReceiving.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(XMPOReceiving.class
+                    .getName()).log(Level.SEVERE, null, ex);
             return false;
         }
 
@@ -2181,5 +2202,6 @@ public class POReceiving {
     private final Double pxeTaxRate = 0.12;
     private final Double pxeTaxExcludRte = 1.12;
 
-    private final String pxeModuleName = POReceiving1.class.getSimpleName();
+    private final String pxeModuleName = POReceiving1.class
+            .getSimpleName();
 }
