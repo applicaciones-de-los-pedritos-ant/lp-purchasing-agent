@@ -232,6 +232,7 @@ public class POReceiving {
             case 100:
                 return paDetailOthers.get(fnRow).getValue("xBarCodex");
             case 101:
+                return paDetailOthers.get(fnRow).getValue("xDescript");
             case 102:
                 return paDetailOthers.get(fnRow).getValue("sMeasurNm");
             case 103:
@@ -532,11 +533,11 @@ public class POReceiving {
             setMessage("Invalid Reference No detected.");
             return false;
         }
-        if (pnEditMode == EditMode.ADDNEW || pnEditMode == EditMode.UPDATE) {
-            if (!checkReferNox(loNewEnt.getTransNox(), loNewEnt.getReferNo())) {
-                return false;
-            }
-        }
+//        if (pnEditMode == EditMode.ADDNEW || pnEditMode == EditMode.UPDATE) {
+//            if (!checkReferNox(loNewEnt.getTransNox(), loNewEnt.getReferNo())) {
+//                return false;
+//            }
+//        }
 
         if (loNewEnt.getReferDate() == null) {
             setMessage("Invalid Reference Date detected.");
@@ -740,33 +741,32 @@ public class POReceiving {
         return true;
     }
 
-    public boolean checkReferNox(String fsTransNox, String fsReferNox) {
-        String lsSQL = getSQ_ReceivingMaster();
-        Connection loConn = null;
-        loConn = setConnection();
-
-        lsSQL = MiscUtil.addCondition(lsSQL, "sTransNox != " + SQLUtil.toSQL(fsTransNox));
-        lsSQL = MiscUtil.addCondition(lsSQL, "sReferNox = " + SQLUtil.toSQL(getMaster("sReferNox")));
-        lsSQL = MiscUtil.addCondition(lsSQL, "sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()));
-        ResultSet loRS = poGRider.executeQuery(lsSQL);
-        System.out.println(lsSQL);
-        try {
-            if (loRS.next()) {
-                setMessage("Reference No already exist!!!");
-                return false;
-            }
-        } catch (SQLException ex) {
-            setErrMsg(ex.getMessage());
-        } finally {
-            MiscUtil.close(loRS);
-            if (!pbWithParent) {
-                MiscUtil.close(loConn);
-            }
-        }
-
-        return true;
-    }
-
+//    public boolean checkReferNox(String fsTransNox, String fsReferNox) {
+//        String lsSQL = getSQ_ReceivingMaster();
+//        Connection loConn = null;
+//        loConn = setConnection();
+//
+//        lsSQL = MiscUtil.addCondition(lsSQL, "sTransNox != " + SQLUtil.toSQL(fsTransNox));
+//        lsSQL = MiscUtil.addCondition(lsSQL, "sReferNox = " + SQLUtil.toSQL(getMaster("sReferNox")));
+//        lsSQL = MiscUtil.addCondition(lsSQL, "sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()));
+//        ResultSet loRS = poGRider.executeQuery(lsSQL);
+//        System.out.println(lsSQL);
+//        try {
+//            if (loRS.next()) {
+//                setMessage("Reference No already exist!!!");
+//                return false;
+//            }
+//        } catch (SQLException ex) {
+//            setErrMsg(ex.getMessage());
+//        } finally {
+//            MiscUtil.close(loRS);
+//            if (!pbWithParent) {
+//                MiscUtil.close(loConn);
+//            }
+//        }
+//
+//        return true;
+//    }
     public boolean deleteTransaction(String string) {
         UnitPOReceivingMaster loObject = loadTransaction(string);
         boolean lbResult = false;
@@ -1286,6 +1286,9 @@ public class POReceiving {
                             loRS.beforeFirst();
                             while (loRS.next()) {
                                 for (int lnCtr = 0; lnCtr < ItemCount(); lnCtr++) {
+                                    if (fnRow == lnCtr) {
+                                        continue;
+                                    }
                                     if (!getDetail(lnCtr, "sOrderNox").toString().equalsIgnoreCase(getDetail(fnRow, "sOrderNox").toString())) {
                                         continue;
                                     }
@@ -1353,7 +1356,7 @@ public class POReceiving {
                         if (fnCol == 4) {
                             setDetail(fnRow, "nUnitPrce", 0.00);
                         }
-                        if (!getDetail(fnRow, "sOrderNox").equals("")) {
+                        if (!getDetail(fnRow, "sOrderNox").equals("") && getDetail(fnRow, "sStockIDx").equals("")) {
                             ShowMessageFX.Warning("Order No. has been fully consumed. No additional details can be added", "Warning", "No record loaded.");
                         }
                         return false;
@@ -2023,7 +2026,7 @@ public class POReceiving {
                         lsHeader,
                         lsColName,
                         lsColCrit,
-                        fbByCode ? 2 : 1);
+                        fbByCode ? 1 : 0);
 
                 if (loJSON != null) {
                     setMaster(5, (String) loJSON.get("sSupplier"));
@@ -2065,14 +2068,34 @@ public class POReceiving {
 
             loStmt = loCon.createStatement();
             loRS = loStmt.executeQuery(getPODetail(fsOrderNox));
+            loRS.beforeFirst();
+            int lnCount = ItemCount();
+
             while (loRS.next()) {
-                setDetail(ItemCount() - 1, "sOrderNox", loRS.getString("sTransNox"));
-                setDetail(ItemCount() - 1, "sStockIDx", loRS.getString("sStockIDx"));
-                setDetail(ItemCount() - 1, "nUnitPrce", loRS.getDouble("nUnitPrce"));
-                setDetail(ItemCount() - 1, "nQuantity", loRS.getDouble("nQuantity"));
-                setDetail(ItemCount() - 1, "sBrandNme", loRS.getString("sBrandNme"));
-                addDetail();
+                boolean lbAddDetail = true;
+                //check existing
+                for (int lnCtr = 0; lnCtr < lnCount; lnCtr++) {
+                    if (getDetail(lnCtr, "sOrderNox").toString().equalsIgnoreCase(fsOrderNox)
+                            && loRS.getString("sStockIDx").equalsIgnoreCase(getDetail(lnCtr, "sStockIDx").toString())) {
+
+                        lbAddDetail = false;
+                        break;
+                    }
+
+                }
+                if (lbAddDetail) {
+                    setDetail(ItemCount() - 1, "sOrderNox", loRS.getString("sTransNox"));
+                    setDetail(ItemCount() - 1, "sStockIDx", loRS.getString("sStockIDx"));
+                    setDetail(ItemCount() - 1, "nUnitPrce", loRS.getDouble("nUnitPrce"));
+                    setDetail(ItemCount() - 1, "nQuantity", loRS.getDouble("nQuantity"));
+                    setDetail(ItemCount() - 1, "sBrandNme", loRS.getString("sBrandNme"));
+                    addDetail();
+
+                }
+
             }
+            loRS.close();
+
         } catch (SQLException ex) {
             ex.printStackTrace();
         } finally {
