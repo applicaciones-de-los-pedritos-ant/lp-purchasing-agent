@@ -116,7 +116,6 @@ public class POReceiving {
             paDetailOthers.add(new UnitPOReceivingDetailOthers());
         }
 
-
         poData.setTranTotal(computeTotal());
         poData.setTaxWHeld(computeTaxWHeld());
         return true;
@@ -233,6 +232,7 @@ public class POReceiving {
             case 100:
                 return paDetailOthers.get(fnRow).getValue("xBarCodex");
             case 101:
+                return paDetailOthers.get(fnRow).getValue("xDescript");
             case 102:
                 return paDetailOthers.get(fnRow).getValue("sMeasurNm");
             case 103:
@@ -1286,6 +1286,9 @@ public class POReceiving {
                             loRS.beforeFirst();
                             while (loRS.next()) {
                                 for (int lnCtr = 0; lnCtr < ItemCount(); lnCtr++) {
+                                    if (fnRow == lnCtr) {
+                                        continue;
+                                    }
                                     if (!getDetail(lnCtr, "sOrderNox").toString().equalsIgnoreCase(getDetail(fnRow, "sOrderNox").toString())) {
                                         continue;
                                     }
@@ -1353,7 +1356,7 @@ public class POReceiving {
                         if (fnCol == 4) {
                             setDetail(fnRow, "nUnitPrce", 0.00);
                         }
-                        if (!getDetail(fnRow, "sOrderNox").equals("")) {
+                        if (!getDetail(fnRow, "sOrderNox").equals("") && !getDetail(fnRow, "sStockIDx").equals("")) {
                             ShowMessageFX.Warning("Order No. has been fully consumed. No additional details can be added", "Warning", "No record loaded.");
                         }
                         return false;
