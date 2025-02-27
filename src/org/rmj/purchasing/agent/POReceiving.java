@@ -1356,7 +1356,7 @@ public class POReceiving {
                         if (fnCol == 4) {
                             setDetail(fnRow, "nUnitPrce", 0.00);
                         }
-                        if (!getDetail(fnRow, "sOrderNox").equals("") && !getDetail(fnRow, "sStockIDx").equals("")) {
+                        if (!getDetail(fnRow, "sOrderNox").equals("") && getDetail(fnRow, "sStockIDx").equals("")) {
                             ShowMessageFX.Warning("Order No. has been fully consumed. No additional details can be added", "Warning", "No record loaded.");
                         }
                         return false;
