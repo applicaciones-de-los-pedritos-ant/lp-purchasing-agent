@@ -1247,8 +1247,13 @@ public class POReceiving {
                                 for (int lnCtr = 0; lnCtr < ItemCount(); lnCtr++) {
                                     if (getDetail(lnCtr, "sOrderNox").toString().equalsIgnoreCase((String) loJSON.get("sTransNox"))) {
                                         if (!getDetail(fnRow, "sStockIDx").toString().isEmpty()) {
-                                            if (getDetail(lnCtr, "sStockIDx").toString().equalsIgnoreCase(loRS.getString("sStockIDx")));
-                                            return false;
+                                            if (getDetail(lnCtr, "sStockIDx").toString().equalsIgnoreCase(loRS.getString("sStockIDx"))) {
+                                                if (getDetail(lnCtr, "sOrderNox").equals((String) loJSON.get("sTransNox")) && !getDetail(fnRow, "sStockIDx").equals("")) {
+                                                    ShowMessageFX.Warning("Order No. has been fully consumed. No additional details can be added", "Warning", "No record loaded.");
+
+                                                }
+                                                return false;
+                                            }
                                         }
                                     }
 
@@ -1261,6 +1266,7 @@ public class POReceiving {
 
                     } else {
                         setDetail(fnRow, fnCol, "");
+
                         return false;
                     }
                 case 4:
@@ -1285,17 +1291,27 @@ public class POReceiving {
                             loRS = poGRider.executeQuery(getPODetail((String) getDetail(fnRow, "sOrderNox")));
                             loRS.beforeFirst();
                             while (loRS.next()) {
+                                boolean isDuplicate = false;
+
                                 for (int lnCtr = 0; lnCtr < ItemCount(); lnCtr++) {
-                                    if (fnRow == lnCtr) {
+                                    if (lnCtr == fnRow) {
+                                        isDuplicate = false;
                                         continue;
-                                    }
-                                    if (!getDetail(lnCtr, "sOrderNox").toString().equalsIgnoreCase(getDetail(fnRow, "sOrderNox").toString())) {
-                                        continue;
-                                    }
-                                    if (!getDetail(lnCtr, "sStockIDx").toString().equalsIgnoreCase((String) loRS.getString("sStockIDx"))) {
-                                        lsCondition += ", " + SQLUtil.toSQL(getDetail(lnCtr, "sStockIDx"));
                                     }
 
+                                    String sOrderNo = getDetail(lnCtr, "sOrderNox").toString();
+                                    String sStockID = getDetail(lnCtr, "sStockIDx").toString();
+                                    String newStockID = loRS.getString("sStockIDx");
+
+                                    if (sOrderNo.equalsIgnoreCase(getDetail(fnRow, "sOrderNox").toString())
+                                            && sStockID.equalsIgnoreCase(newStockID)) {
+                                        isDuplicate = true;
+                                        break;
+                                    }
+                                }
+
+                                if (isDuplicate) {
+                                    lsCondition += ", " + SQLUtil.toSQL(loRS.getString("sStockIDx"));
                                 }
                             }
                             if (!lsCondition.isEmpty()) {
