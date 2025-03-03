@@ -2103,8 +2103,9 @@ public class POReceiving {
                     setDetail(ItemCount() - 1, "sOrderNox", loRS.getString("sTransNox"));
                     setDetail(ItemCount() - 1, "sStockIDx", loRS.getString("sStockIDx"));
                     setDetail(ItemCount() - 1, "nUnitPrce", loRS.getDouble("nUnitPrce"));
-                    setDetail(ItemCount() - 1, "nQuantity", loRS.getDouble("nQuantity"));
+//                    setDetail(ItemCount() - 1, "nQuantity", loRS.getDouble("nQuantity"));
                     setDetail(ItemCount() - 1, "sBrandNme", loRS.getString("sBrandNme"));
+                    setDetail(ItemCount() - 1, "nOrdrQtyx", loRS.getDouble("nQuantity"));
                     addDetail();
 
                 }
