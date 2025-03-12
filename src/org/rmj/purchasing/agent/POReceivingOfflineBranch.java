@@ -1189,7 +1189,7 @@ public class POReceivingOfflineBranch {
                     lsColCrit = "a.sTransNox»d.sClientNm»a.sReferNox»a.dTransact";
                     lsSQL = getSQ_Purchases();
 //                    lsSQL = MiscUtil.addCondition(getSQ_Purchases(), " sTransNox LIKE " + SQLUtil.toSQL(psBranchCd + "%"));
-                    
+
                     loJSON = showFXDialog.jsonSearch(poGRider,
                             lsSQL,
                             fsValue,
@@ -1276,8 +1276,10 @@ public class POReceivingOfflineBranch {
                                 }
                             }
                             if (!lsCondition.isEmpty()) {
-                                lsCondition = " AND a.sStockIDx NOT IN (" + lsCondition.substring(2) + ") GROUP BY a.sStockIDx";
+                                lsCondition = " AND a.sStockIDx NOT IN (" + lsCondition.substring(2) + ") GROUP BY e.sStockIDx";
                                 lsSQL = lsSQL + lsCondition;
+                            } else {
+                                lsSQL = lsSQL + " GROUP BY e.sStockIDx";
                             }
                         }
 
