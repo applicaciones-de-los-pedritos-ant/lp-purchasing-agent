@@ -522,11 +522,11 @@ public class POReceivingOfflineBranch {
             setMessage("Invalid Reference No detected.");
             return false;
         }
-        if (pnEditMode != EditMode.ADDNEW) {
-            if (!checkReferNox(loNewEnt.getTransNox(), loNewEnt.getReferNo())) {
-                return false;
-            }
-        }
+//        if (pnEditMode != EditMode.ADDNEW) {
+//            if (!checkReferNox(loNewEnt.getTransNox(), loNewEnt.getReferNo())) {
+//                return false;
+//            }
+//        }
 
         if (loNewEnt.getReferDate() == null) {
             setMessage("Invalid Reference Date detected.");
@@ -725,33 +725,33 @@ public class POReceivingOfflineBranch {
 
         return true;
     }
-
-    public boolean checkReferNox(String fsTransNox, String fsReferNox) {
-        String lsSQL = getSQ_ReceivingMaster();
-        Connection loConn = null;
-        loConn = setConnection();
-
-        lsSQL = MiscUtil.addCondition(lsSQL, "sTransNox != " + SQLUtil.toSQL(fsTransNox));
-        lsSQL = MiscUtil.addCondition(lsSQL, "sReferNox = " + SQLUtil.toSQL(poData.getBranchCd()));
-        lsSQL = MiscUtil.addCondition(lsSQL, "sBranchCd = " + SQLUtil.toSQL(poData.getBranchCd()));
-        ResultSet loRS = poGRider.executeQuery(lsSQL);
-
-        try {
-            if (!loRS.next()) {
-                setMessage("Reference No already exist!!!");
-                return false;
-            }
-        } catch (SQLException ex) {
-            setErrMsg(ex.getMessage());
-        } finally {
-            MiscUtil.close(loRS);
-            if (!pbWithParent) {
-                MiscUtil.close(loConn);
-            }
-        }
-
-        return true;
-    }
+//
+//    public boolean checkReferNox(String fsTransNox, String fsReferNox) {
+//        String lsSQL = getSQ_ReceivingMaster();
+//        Connection loConn = null;
+//        loConn = setConnection();
+//
+//        lsSQL = MiscUtil.addCondition(lsSQL, "sTransNox != " + SQLUtil.toSQL(fsTransNox));
+//        lsSQL = MiscUtil.addCondition(lsSQL, "sReferNox = " + SQLUtil.toSQL(poData.getBranchCd()));
+//        lsSQL = MiscUtil.addCondition(lsSQL, "sBranchCd = " + SQLUtil.toSQL(poData.getBranchCd()));
+//        ResultSet loRS = poGRider.executeQuery(lsSQL);
+//
+//        try {
+//            if (!loRS.next()) {
+//                setMessage("Reference No already exist!!!");
+//                return false;
+//            }
+//        } catch (SQLException ex) {
+//            setErrMsg(ex.getMessage());
+//        } finally {
+//            MiscUtil.close(loRS);
+//            if (!pbWithParent) {
+//                MiscUtil.close(loConn);
+//            }
+//        }
+//
+//        return true;
+//    }
 
     public boolean deleteTransaction(String string) {
         UnitPOReceivingMaster loObject = loadTransaction(string);
@@ -1176,101 +1176,176 @@ public class POReceivingOfflineBranch {
 
         setErrMsg("");
         setMessage("");
+//        if (psBranchCd.isEmpty() || psBranchCd == null) {
+//            ShowMessageFX.Warning("Invalid Branch Detected. Please fill up Branch", "Warning", "No record loaded.");
+//            return false;
+//        }
+        try {
+            switch (fnCol) {
+                case 3:
 
-        switch (fnCol) {
-            case 3:
-                lsHeader = "Order No»Supplier»Refer No»Date";
-                lsColName = "sTransNox»sClientNm»sReferNox»dTransact";
-                lsColCrit = "a.sTransNox»d.sClientNm»a.sReferNox»a.dTransact";
-                lsSQL = getSQ_Purchases();
-
-                loJSON = showFXDialog.jsonSearch(poGRider,
-                        lsSQL,
-                        fsValue,
-                        lsHeader,
-                        lsColName,
-                        lsColCrit,
-                        fbByCode ? 0 : 2);
-
-                if (loJSON != null) {
-                    setDetail(fnRow, fnCol, (String) loJSON.get("sTransNox"));
-                    return true;
-                } else {
-                    setDetail(fnRow, fnCol, "");
-                    return false;
-                }
-            case 4:
-            case 5:
-//                lsHeader = "Brand»Description»Unit»Model»Inv. Type»Barcode»Stock ID";
-//                lsColName = "xBrandNme»sDescript»sMeasurNm»xModelNme»xInvTypNm»sBarCodex»sStockIDx";
-//                lsColCrit = "b.sDescript»a.sDescript»f.sMeasurNm»c.sDescript»d.sDescript»a.sBarCodex»a.sStockIDx";
-
-                lsHeader = "Barcode»Description»Brand»Unit»Qty. On-Hand»Model»Inv. Type»Stock ID";
-                lsColName = "sBarCodex»sDescript»xBrandNme»sMeasurNm»nQtyOnHnd»xModelNme»xInvTypNm»sStockIDx";
-                lsColCrit = "a.sBarCodex»a.sDescript»b.sDescript»f.sMeasurNm»e.nQtyOnHnd»c.sDescript»d.sDescript»a.sStockIDx";
-
-                if (getDetail(fnRow, "sOrderNox").equals("")) {
-                    lsSQL = MiscUtil.addCondition(getSQ_Inventory(), "a.cRecdStat = "
-                            + SQLUtil.toSQL(RecordStatus.ACTIVE));
-                } else {
-                    lsSQL = MiscUtil.addCondition(getSQ_Stocks((String) getDetail(fnRow, "sOrderNox")), "a.cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
-                }
-
-                if (ItemCount() > 0) {
-                    for (int lnCtr = 0; lnCtr < ItemCount(); lnCtr++) {
-                        lsCondition += ", " + SQLUtil.toSQL(getDetail(lnCtr, "sStockIDx"));
-                    }
-                    lsCondition = " AND a.sStockIDx NOT IN (" + lsCondition.substring(2) + ") GROUP BY a.sStockIDx";
-                }
-
-                if (fbByCode) {
-                    lsSQL = MiscUtil.addCondition(lsSQL, "a.sStockIDx = " + SQLUtil.toSQL(fsValue));
-                    System.out.println(lsSQL);
-                    loRS = poGRider.executeQuery(lsSQL);
-
-                    loJSON = showFXDialog.jsonBrowse(poGRider, loRS, lsHeader, lsColName);
-                } else {
-                    System.out.println(lsSQL);
+                    lsHeader = "Order No»Supplier»Refer No»Date";
+                    lsColName = "sTransNox»sClientNm»sReferNox»dTransact";
+                    lsColCrit = "a.sTransNox»d.sClientNm»a.sReferNox»a.dTransact";
+                    lsSQL = getSQ_Purchases();
+//                    lsSQL = MiscUtil.addCondition(getSQ_Purchases(), " sTransNox LIKE " + SQLUtil.toSQL(psBranchCd + "%"));
+                    
                     loJSON = showFXDialog.jsonSearch(poGRider,
                             lsSQL,
                             fsValue,
                             lsHeader,
                             lsColName,
                             lsColCrit,
-                            fbSearch ? 1 : 5);
-                }
+                            fbByCode ? 0 : 2);
 
-                if (loJSON != null) {
-                    setDetail(fnRow, fnCol, (String) loJSON.get("sStockIDx"));
-                    //delete the barcode and descript on temp table
-                    setDetail(fnRow, 100, (String) loJSON.get("sBarCodex"));
-                    setDetail(fnRow, 101, "");
-                    setDetail(fnRow, 102, "");
+                    if (loJSON != null) {
+                        //validate if already exist to restric same DR/SI
+                        lsSQL = MiscUtil.addCondition(getSQ_PurchasesDetail(), "sTransNox = " + SQLUtil.toSQL((String) loJSON.get("sTransNox")));
+                        if (ItemCount() > 0) {
+                            loRS = poGRider.executeQuery(lsSQL);
+                            loRS.beforeFirst();
+                            while (loRS.next()) {
+                                for (int lnCtr = 0; lnCtr < ItemCount(); lnCtr++) {
+                                    if (getDetail(lnCtr, "sOrderNox").toString().equalsIgnoreCase((String) loJSON.get("sTransNox"))) {
+                                        if (!getDetail(fnRow, "sStockIDx").toString().isEmpty()) {
+                                            if (getDetail(lnCtr, "sStockIDx").toString().equalsIgnoreCase(loRS.getString("sStockIDx"))) {
+                                                if (getDetail(lnCtr, "sOrderNox").equals((String) loJSON.get("sTransNox")) && !getDetail(fnRow, "sStockIDx").equals("")) {
+                                                    ShowMessageFX.Warning("Order No. has been fully consumed. No additional details can be added", "Warning", "No record loaded.");
 
-                    setDetail(fnRow, "sBrandNme", (String) loJSON.get("xBrandNme"));
-                    setDetail(fnRow, "sMeasurNm", loJSON.get("sMeasurNm"));
-                    if (fnCol == 4) {
-                        setDetail(fnRow, "nUnitPrce", Double.valueOf((String) loJSON.get("nUnitPrce")));
+                                                }
+                                                return false;
+                                            }
+                                        }
+                                    }
+
+                                }
+                            }
+                            loRS.close();
+                        }
+                        setDetail(fnRow, fnCol, (String) loJSON.get("sTransNox"));
+                        return true;
+
+                    } else {
+                        setDetail(fnRow, fnCol, "");
+
+                        return false;
                     }
-                    if (loJSON.get("nQuantity") != null) {
-                        setDetail(fnRow, 7, Double.valueOf((String) loJSON.get("nQuantity")));
+                case 4:
+                case 5:
+//                lsHeader = "Brand»Description»Unit»Model»Inv. Type»Barcode»Stock ID";
+//                lsColName = "xBrandNme»sDescript»sMeasurNm»xModelNme»xInvTypNm»sBarCodex»sStockIDx";
+//                lsColCrit = "b.sDescript»a.sDescript»f.sMeasurNm»c.sDescript»d.sDescript»a.sBarCodex»a.sStockIDx";
+
+                    lsHeader = "Barcode»Description»Brand»Unit»Qty. On-Hand»Model»Inv. Type»Stock ID";
+                    lsColName = "sBarCodex»sDescript»xBrandNme»sMeasurNm»nQtyOnHnd»xModelNme»xInvTypNm»sStockIDx";
+                    lsColCrit = "a.sBarCodex»a.sDescript»b.sDescript»f.sMeasurNm»e.nQtyOnHnd»c.sDescript»d.sDescript»a.sStockIDx";
+
+                    if (getDetail(fnRow, "sOrderNox").equals("")) {
+                        lsSQL = MiscUtil.addCondition(getSQ_Inventory(), "a.cRecdStat = "
+                                + SQLUtil.toSQL(RecordStatus.ACTIVE) + " AND sBranchCd = "
+                                + SQLUtil.toSQL(poGRider.getBranchCode()));
+                    } else {
+                        //restrict loading same po and barcode
+                        lsSQL = MiscUtil.addCondition(getSQ_Stocks((String) getDetail(fnRow, "sOrderNox")), "a.cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
+
+                        if (ItemCount() > 0) {
+                            loRS = poGRider.executeQuery(getPODetail((String) getDetail(fnRow, "sOrderNox")));
+                            loRS.beforeFirst();
+                            while (loRS.next()) {
+                                boolean isDuplicate = false;
+
+                                for (int lnCtr = 0; lnCtr < ItemCount(); lnCtr++) {
+                                    if (lnCtr == fnRow) {
+                                        isDuplicate = false;
+                                        continue;
+                                    }
+
+                                    String sOrderNo = getDetail(lnCtr, "sOrderNox").toString();
+                                    String sStockID = getDetail(lnCtr, "sStockIDx").toString();
+                                    String newStockID = loRS.getString("sStockIDx");
+
+                                    if (sOrderNo.equalsIgnoreCase(getDetail(fnRow, "sOrderNox").toString())
+                                            && sStockID.equalsIgnoreCase(newStockID)) {
+                                        isDuplicate = true;
+                                        break;
+                                    }
+                                }
+
+                                if (isDuplicate) {
+                                    lsCondition += ", " + SQLUtil.toSQL(loRS.getString("sStockIDx"));
+                                }
+                            }
+                            if (!lsCondition.isEmpty()) {
+                                lsCondition = " AND a.sStockIDx NOT IN (" + lsCondition.substring(2) + ") GROUP BY a.sStockIDx";
+                                lsSQL = lsSQL + lsCondition;
+                            }
+                        }
+
                     }
-                    return true;
-                } else {
-                    setDetail(fnRow, fnCol, "");
+//                if (ItemCount() > 0) {
+//                    for (int lnCtr = 0; lnCtr < ItemCount(); lnCtr++) {
+//                        lsCondition += ", " + SQLUtil.toSQL(getDetail(lnCtr, "sStockIDx"));
+//                    }
+//                    lsCondition = " AND a.sStockIDx NOT IN (" + lsCondition.substring(2) + ") GROUP BY a.sStockIDx";
+//                    lsSQL = lsSQL + lsCondition;
+//                }
+                    if (fbByCode) {
+                        lsSQL = MiscUtil.addCondition(lsSQL, "a.sStockIDx = " + SQLUtil.toSQL(fsValue));
+
+                        loRS = poGRider.executeQuery(lsSQL);
+
+                        loJSON = showFXDialog.jsonBrowse(poGRider, loRS, lsHeader, lsColName);
+                    } else {
+                        loJSON = showFXDialog.jsonSearch(poGRider,
+                                lsSQL,
+                                fsValue,
+                                lsHeader,
+                                lsColName,
+                                lsColCrit,
+                                fbSearch ? 1 : 5);
+                    }
+
+                    if (loJSON != null) {
+                        setDetail(fnRow, fnCol, (String) loJSON.get("sStockIDx"));
+                        //delete the barcode and descript on temp table
+                        setDetail(fnRow, 100, (String) loJSON.get("sBarCodex"));
+                        setDetail(fnRow, 101, "");
+                        setDetail(fnRow, 102, "");
+
+                        setDetail(fnRow, "sBrandNme", (String) loJSON.get("xBrandNme"));
+                        setDetail(fnRow, "sMeasurNm", loJSON.get("sMeasurNm"));
+                        if (fnCol == 4) {
+                            setDetail(fnRow, "nUnitPrce", Double.valueOf((String) loJSON.get("nUnitPrce")));
+                        }
+                        if (loJSON.get("nQuantity") != null) {
+                            setDetail(fnRow, "nOrdrQtyx", Double.valueOf((String) loJSON.get("nQuantity")));
+//                            setDetail(fnRow, 7, Double.valueOf((String) loJSON.get("nQuantity")));
+                        }
+                        return true;
+                    } else {
+                        setDetail(fnRow, fnCol, "");
 //                    //delete the barcode and descript on temp table
 //                    setDetail(fnRow, 100, "");
 //                    setDetail(fnRow, 101, "");
 //                    setDetail(fnRow, 102, "");
 //                    setDetail(fnRow, "sBrandNme", "");
 //                    
-                    if (fnCol == 4) {
-                        setDetail(fnRow, "nUnitPrce", 0.00);
+                        if (fnCol == 4) {
+                            setDetail(fnRow, "nUnitPrce", 0.00);
+                        }
+                        if (!getDetail(fnRow, "sOrderNox").equals("") && getDetail(fnRow, "sStockIDx").equals("")) {
+                            ShowMessageFX.Warning("Order No. has been fully consumed. No additional details can be added", "Warning", "No record loaded.");
+                        }
+                        return false;
+
                     }
+
+                default:
                     return false;
-                }
-            default:
-                return false;
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(POReceiving.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
         }
     }
 
@@ -1448,8 +1523,7 @@ public class POReceivingOfflineBranch {
                 + " WHERE a.sStockIDx = e.sStockIDx"
                 + " AND g.sTransNox = h.sTransNox"
                 + " AND h.sStockIDx = e.sStockIDx"
-                + " AND g.sTransNox = " + SQLUtil.toSQL(fsOrderNox)
-                + " GROUP BY e.sStockIDx ";
+                + " AND g.sTransNox = " + SQLUtil.toSQL(fsOrderNox);
     }
 
     private String getSQ_Purchases() {
@@ -1518,6 +1592,13 @@ public class POReceivingOfflineBranch {
                 + " LEFT JOIN Measure e"
                 + " ON c.sMeasurID = e.sMeasurID"
                 + " ORDER BY a.nEntryNox";
+    }
+
+    private String getSQ_PurchasesDetail() {
+        return "SELECT "
+                + "  sTransNox"
+                + ", sStockIDx"
+                + " FROM PO_Detail ";
     }
 
     public int ItemCount() {
@@ -1787,8 +1868,8 @@ public class POReceivingOfflineBranch {
 //                        MasterRetreived(fnCol);
                         return true;
                     }
+                    break;
                 }
-                break;
             case 5: //sSupplier
                 XMSupplier loSupplier = new XMSupplier(poGRider, psBranchCd, true);
 
@@ -1823,18 +1904,23 @@ public class POReceivingOfflineBranch {
                 }
                 break;
             case 17:
+//                if (psBranchCd.isEmpty() || psBranchCd == null) {
+//                    ShowMessageFX.Warning("Invalid Branch Detected. Please fill up Branch", "Warning", "No record loaded.");
+//                    return false;
+//                }
                 String lsHeader = "Order No»Supplier»Refer No»Date";
                 String lsColName = "sTransNox»sClientNm»sReferNox»dTransact";
                 String lsColCrit = "a.sTransNox»d.sClientNm»a.sReferNox»a.dTransact";
                 String lsSQL = getSQ_Purchases();
 
+//                String lsSQL = MiscUtil.addCondition(getSQ_Purchases(), " sTransNox LIKE " + SQLUtil.toSQL(psBranchCd + "%"));
                 loJSON = showFXDialog.jsonSearch(poGRider,
                         lsSQL,
                         fsValue,
                         lsHeader,
                         lsColName,
                         lsColCrit,
-                        fbByCode ? 2 : 1);
+                        fbByCode ? 1 : 0);
 
                 if (loJSON != null) {
                     setMaster(5, (String) loJSON.get("sSupplier"));
