@@ -686,8 +686,7 @@ public class POReceiving {
                         lsSQL = MiscUtil.makeSQL((GEntity) loNewEnt,
                                 (GEntity) laSubUnit.get(lnCtr),
                                 " nEntryNox = " + SQLUtil.toSQL(loNewEnt.getValue(2))
-                                + " AND sTransNox = " + SQLUtil.toSQL(loNewEnt.getValue(1))
-                                + " AND sStockIDx = " + SQLUtil.toSQL(loNewEnt.getValue(4)),
+                                + " AND sTransNox = " + SQLUtil.toSQL(loNewEnt.getValue(1)),
                                 "sBrandNme");
 
                     } else {
