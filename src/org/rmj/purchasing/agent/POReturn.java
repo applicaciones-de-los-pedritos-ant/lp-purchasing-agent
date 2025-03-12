@@ -521,9 +521,9 @@ public class POReturn {
                     break;
                 }
             }
-            if (lnCtr == laSubUnit.size() - 1) {
+            if (lnCtr <= laSubUnit.size() - 1) {
                 lsSQL = "DELETE FROM " + poDetail.getTable()
-                        + " WHERE nEntryNox = " + SQLUtil.toSQL(laSubUnit.get(lnCtr).getEntryNox())
+                        + " WHERE nEntryNox >= " + SQLUtil.toSQL(laSubUnit.get(lnCtr).getEntryNox())
                         + " AND sTransNox = " + SQLUtil.toSQL(laSubUnit.get(lnCtr).getTransNox());
 
                 if (!lsSQL.equals("")) {
