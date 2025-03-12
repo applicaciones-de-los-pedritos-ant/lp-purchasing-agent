@@ -626,7 +626,7 @@ public class POReceivingOfflineBranch {
                     || paDetail.get(lnCtr).getQuantity().doubleValue() == 0.00) {
                 setMessage("Detail might not have item or zero quantity.");
                 return false;
-            } 
+            }
         }
 
         if (pnEditMode == EditMode.ADDNEW) {
@@ -671,8 +671,7 @@ public class POReceivingOfflineBranch {
                         lsSQL = MiscUtil.makeSQL((GEntity) loNewEnt,
                                 (GEntity) laSubUnit.get(lnCtr),
                                 " nEntryNox = " + SQLUtil.toSQL(loNewEnt.getValue(2))
-                                + " AND sTransNox = " + SQLUtil.toSQL(loNewEnt.getValue(1))
-                                + " AND sStockIDx = " + SQLUtil.toSQL(loNewEnt.getValue(4)),
+                                + " AND sTransNox = " + SQLUtil.toSQL(loNewEnt.getValue(1)),
                                 "sBrandNme");
 
                     } else {
@@ -693,9 +692,8 @@ public class POReceivingOfflineBranch {
                 } else {
                     for (int lnCtr2 = lnCtr; lnCtr2 <= laSubUnit.size() - 1; lnCtr2++) {
                         lsSQL = "DELETE FROM " + poDetail.getTable()
-                                + " WHERE sStockIDx = " + SQLUtil.toSQL(laSubUnit.get(lnCtr2).getStockID())
-                                + " AND nEntryNox = " + SQLUtil.toSQL(laSubUnit.get(lnCtr2).getEntryNox())
-                                    + " AND sTransNox = " + SQLUtil.toSQL(laSubUnit.get(lnCtr2).getTransNox());
+                                + " WHERE nEntryNox = " + SQLUtil.toSQL(laSubUnit.get(lnCtr2).getEntryNox())
+                                + " AND sTransNox = " + SQLUtil.toSQL(laSubUnit.get(lnCtr2).getTransNox());
 
                         if (!lsSQL.equals("")) {
                             if (poGRider.executeQuery(lsSQL, poDetail.getTable(), "", "") == 0) {
@@ -711,9 +709,8 @@ public class POReceivingOfflineBranch {
             }
             if (lnCtr == laSubUnit.size() - 1) {
                 lsSQL = "DELETE FROM " + poDetail.getTable()
-                        + " WHERE sStockIDx = " + SQLUtil.toSQL(laSubUnit.get(lnCtr).getStockID())
-                        + " AND nEntryNox = " + SQLUtil.toSQL(laSubUnit.get(lnCtr).getEntryNox())
-                                    + " AND sTransNox = " + SQLUtil.toSQL(laSubUnit.get(lnCtr).getTransNox());
+                        + " WHERE nEntryNox = " + SQLUtil.toSQL(laSubUnit.get(lnCtr).getEntryNox())
+                        + " AND sTransNox = " + SQLUtil.toSQL(laSubUnit.get(lnCtr).getTransNox());
 
                 if (!lsSQL.equals("")) {
                     if (poGRider.executeQuery(lsSQL, poDetail.getTable(), "", "") == 0) {
@@ -1013,8 +1010,6 @@ public class POReceivingOfflineBranch {
         }
         return lbResult;
     }
-
-
 
     private boolean saveInvTrans(String fsTransNox, String fsSupplier, Date fdTransact) {
         String lsOrderNo = "";
@@ -1394,7 +1389,7 @@ public class POReceivingOfflineBranch {
                 + " LEFT JOIN Measure f"
                 + " ON a.sMeasurID = f.sMeasurID"
                 + " LEFT JOIN Inv_Master e"
-                + " ON a.sStockIDx = e.sStockIDx" 
+                + " ON a.sStockIDx = e.sStockIDx"
                 + " GROUP BY a.sStockIDx ";
 
         if (!System.getProperty("store.inventory.type").isEmpty()) {
@@ -1454,7 +1449,7 @@ public class POReceivingOfflineBranch {
                 + " AND g.sTransNox = h.sTransNox"
                 + " AND h.sStockIDx = e.sStockIDx"
                 + " AND g.sTransNox = " + SQLUtil.toSQL(fsOrderNox)
-                + " GROUP BY e.sStockIDx " ;
+                + " GROUP BY e.sStockIDx ";
     }
 
     private String getSQ_Purchases() {
@@ -1783,7 +1778,7 @@ public class POReceivingOfflineBranch {
                     if (loBranch.openRecord((String) loJSON.get("sBranchCd"))) {
                         setMaster(fnCol, (String) loBranch.getMaster("sBranchCd"));
                         setMaster(4, (String) loBranch.getMaster("sCompnyID"));
-                        
+
                         psBranchCd = (String) loBranch.getMaster("sBranchCd");
                         String lsTransNox = MiscUtil.getNextCode(poData.getTable(), "sTransNox", true, loConn, psBranchCd);
                         poData.setTransNox(lsTransNox);
