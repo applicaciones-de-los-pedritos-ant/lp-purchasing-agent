@@ -106,6 +106,21 @@ public class POReceiving {
         }
         return true;
     }
+    
+        public boolean addDetailOrder() {
+        if (paDetail.isEmpty()) {
+            paDetail.add(new UnitPOReceivingDetail());
+
+            paDetailOthers.add(new UnitPOReceivingDetailOthers());
+        } else {
+            if (!paDetail.get(ItemCount() - 1).getStockID().equals("")) {
+                paDetail.add(new UnitPOReceivingDetail());
+
+                paDetailOthers.add(new UnitPOReceivingDetailOthers());
+            }
+        }
+        return true;
+    }
 
     public boolean deleteDetail(int fnRow) {
         paDetail.remove(fnRow);
@@ -2106,7 +2121,7 @@ public class POReceiving {
 //                    setDetail(ItemCount() - 1, "nQuantity", loRS.getDouble("nQuantity"));
                     setDetail(ItemCount() - 1, "sBrandNme", loRS.getString("sBrandNme"));
                     setDetail(ItemCount() - 1, "nOrdrQtyx", loRS.getDouble("nQuantity"));
-                    addDetail();
+                    addDetailOrder();
 
                 }
 
