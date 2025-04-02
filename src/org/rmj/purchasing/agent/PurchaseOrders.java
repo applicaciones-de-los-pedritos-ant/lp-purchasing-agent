@@ -1333,7 +1333,9 @@ public class PurchaseOrders {
                 ShowMessageFX.Error(getErrMsg(), pxeModuleName, null);
             }
         } else {
+            if (!getMessage().isEmpty()) {
             ShowMessageFX.Information(null, pxeModuleName, getMessage());
+            }
         }
     }
 
