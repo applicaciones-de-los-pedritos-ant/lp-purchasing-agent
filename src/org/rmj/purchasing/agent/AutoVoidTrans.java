@@ -7,7 +7,6 @@ package org.rmj.purchasing.agent;
 import com.mysql.jdbc.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.rmj.appdriver.GRider;
@@ -15,11 +14,6 @@ import org.rmj.appdriver.MiscUtil;
 import org.rmj.appdriver.SQLUtil;
 import org.rmj.appdriver.constants.EditMode;
 import org.rmj.appdriver.constants.TransactionStatus;
-import org.rmj.cas.inventory.base.InvTransfer;
-import org.rmj.cas.inventory.base.Inventory;
-import org.rmj.cas.purchasing.pojo.UnitPOMaster;
-import org.rmj.purchasing.agent.POReceiving;
-import org.rmj.purchasing.agent.PurchaseOrders;
 
 /**
  *

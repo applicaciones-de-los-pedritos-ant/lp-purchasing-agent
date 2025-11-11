@@ -46,6 +46,7 @@ import org.rmj.lp.parameter.agent.XMBranch;
 import org.rmj.lp.parameter.agent.XMInventoryType;
 import org.rmj.lp.parameter.agent.XMSupplier;
 import org.rmj.lp.parameter.agent.XMTerm;
+import org.rmj.purchasing.statusChange.StatusChange;
 
 public class PurchaseOrders {
 
@@ -708,6 +709,51 @@ public class PurchaseOrders {
         return lbResult;
     }
 
+    public boolean closeTransactionByPass(String fsTransNox) {
+        UnitPOMaster loObject = loadTransaction(fsTransNox);
+        boolean lbResult = false;
+        if (pnEditMode != EditMode.READY) {
+            return false;
+        } else {
+            if (loObject == null) {
+                setMessage("No record found...");
+                return lbResult;
+            }
+
+            if (!loObject.getTranStat().equalsIgnoreCase(TransactionStatus.STATE_OPEN)) {
+                setMessage("Unable to close closed/cancelled/posted/voided transaction.");
+                return lbResult;
+            }
+
+            if (!pbWithParent) {
+                poGRider.beginTrans();
+            }
+
+            JSONObject loJSON = new JSONObject();
+            StatusChange loStatus = new StatusChange();
+            loStatus.setPbWithUI(true);
+            loJSON = loStatus.statusChange(loObject.getTable(),
+                    fsTransNox, "",
+                    "1",
+                    poGRider,
+                    true);
+            if ("success".equals((String) loJSON.get("result"))) {
+                lbResult = true;
+            } else {
+                setErrMsg((String) loJSON.get("message"));
+            }
+            if (!pbWithParent) {
+                if (getErrMsg().isEmpty()) {
+                    poGRider.commitTrans();
+                } else {
+                    poGRider.rollbackTrans();
+                }
+            }
+        }
+
+        return lbResult;
+    }
+
     public boolean postTransaction(String string) {
         if (poGRider.getUserLevel() <= UserRight.ENCODER) {
             JSONObject loJSON = showFXDialog.getApproval(poGRider);
@@ -1334,7 +1380,7 @@ public class PurchaseOrders {
             }
         } else {
             if (!getMessage().isEmpty()) {
-            ShowMessageFX.Information(null, pxeModuleName, getMessage());
+                ShowMessageFX.Information(null, pxeModuleName, getMessage());
             }
         }
     }
