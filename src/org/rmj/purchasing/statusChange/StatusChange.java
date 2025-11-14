@@ -1,5 +1,6 @@
 package org.rmj.purchasing.statusChange;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
@@ -14,6 +15,7 @@ import org.rmj.appdriver.GRider;
 import org.rmj.appdriver.MiscUtil;
 import org.rmj.appdriver.SQLUtil;
 import org.rmj.appdriver.agentfx.ui.showFXDialog;
+import org.rmj.appdriver.constants.RecordStatus;
 import org.rmj.appdriver.constants.UserRight;
 
 /**
@@ -93,15 +95,16 @@ public class StatusChange {
         //system user level
         if (poGRider.getUserLevel() <= UserRight.ENCODER) {
             JSONObject loJSON = showFXDialog.getApproval(poGRider);
-
             if (loJSON == null) {
                 this.poJSON = new JSONObject();
                 this.poJSON.put("result", "error");
                 this.poJSON.put("message", "Error updating the transaction status.");
                 return poJSON;
             }
-
-            if ((int) loJSON.get("nUserLevl") <= UserRight.ENCODER) {
+            //maam she M00110017110
+            //other approving officer from tokenize
+            if (!((String) loJSON.get("sEmployNo")).contains("M00110017110»M00116001969»M00117001523»M00117002119»M00119002528»M00122000395»M00124001410»P00119000033")
+                    || !getOfficer((String) loJSON.get("sUserIDxx"))) {
 
                 this.poJSON = new JSONObject();
                 this.poJSON.put("result", "error");
@@ -174,6 +177,42 @@ public class StatusChange {
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         return poJSON;
+    }
+
+    public boolean getOfficer(String fsUserID) {
+        try {
+            String lsSQL = " SELECT "
+                    + " a.`sUserIDxx`"
+                    + ", b.`sEmployID`"
+                    + ", a.`nUserLevl`"
+                    + ", IFNULL(b.`cEmpRankx`,'12') cEmpRankx"
+                    + ", a.`sProdctID` "
+                    + ", b.`cRecdStat`"
+                    + ", a.`cUserStat`"
+                    + " FROM xxxSysUser a"
+                    + "   LEFT JOIN Employee_Master001 b ON a.`sEmployNo` = b.`sEmployID` "
+                    + " WHERE sProdctID IN(" + SQLUtil.toSQL(poGRider.getProductID())
+                    + "," + SQLUtil.toSQL("gRider") + ")"
+                    + " AND sUserIDxx = " + SQLUtil.toSQL(fsUserID)
+                    + " AND cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE);
+
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+            System.out.println(lsSQL);
+
+            if (MiscUtil.RecordCount(loRS) <= 0) {
+                return false;
+            }
+            loRS.beforeFirst();
+            while (loRS.next()) {
+                if (loRS.getInt("cEmpRankx") <= 6) {
+                    return true;
+                }
+            }
+
+            return false;
+        } catch (SQLException ex) {
+            return false;
+        }
     }
 
     public String getStatusChangeDialogue() throws Exception {
