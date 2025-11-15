@@ -103,8 +103,17 @@ public class StatusChange {
             }
             //maam she M00110017110
             //other approving officer from tokenize
-            if (!((String) loJSON.get("sEmployNo")).contains("M00110017110»M00116001969»M00117001523»M00117002119»M00119002528»M00122000395»M00124001410»P00119000033")
-                    || !getOfficer((String) loJSON.get("sUserIDxx"))) {
+            String lsEmployNo = getEmployNoUser((String) loJSON.get("sUserIDxx"));
+
+            if (lsEmployNo.isEmpty()) {
+                this.poJSON = new JSONObject();
+                this.poJSON.put("result", "error");
+                this.poJSON.put("message", "Invalid Employee No.");
+                return poJSON;
+            }
+
+            if (!"M00110017110»M00116001969»M00117001523»M00117002119»M00119002528»M00122000395»M00124001410»P00119000033".contains(lsEmployNo)
+                    && !getOfficer((String) loJSON.get("sUserIDxx"))) {
 
                 this.poJSON = new JSONObject();
                 this.poJSON.put("result", "error");
@@ -212,6 +221,40 @@ public class StatusChange {
             return false;
         } catch (SQLException ex) {
             return false;
+        }
+    }
+
+    public String getEmployNoUser(String fsUserID) {
+        try {
+            String lsSQL = " SELECT "
+                    + " a.`sUserIDxx`"
+                    + ", b.`sEmployID`"
+                    + ", a.`nUserLevl`"
+                    + ", IFNULL(b.`cEmpRankx`,'12') cEmpRankx"
+                    + ", a.`sProdctID` "
+                    + ", b.`cRecdStat`"
+                    + ", a.`cUserStat`"
+                    + " FROM xxxSysUser a"
+                    + "   LEFT JOIN Employee_Master001 b ON a.`sEmployNo` = b.`sEmployID` "
+                    + " WHERE sProdctID IN(" + SQLUtil.toSQL(poGRider.getProductID())
+                    + "," + SQLUtil.toSQL("gRider") + ")"
+                    + " AND sUserIDxx = " + SQLUtil.toSQL(fsUserID)
+                    + " AND cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE);
+
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+            System.out.println(lsSQL);
+
+            if (MiscUtil.RecordCount(loRS) <= 0) {
+                return "";
+            }
+            loRS.beforeFirst();
+            while (loRS.next()) {
+                return loRS.getString("sEmployID");
+            }
+
+            return "";
+        } catch (SQLException ex) {
+            return "";
         }
     }
 
