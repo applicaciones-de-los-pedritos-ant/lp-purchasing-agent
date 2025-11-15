@@ -112,8 +112,7 @@ public class StatusChange {
                 return poJSON;
             }
 
-            if (!"M00110017110»M00116001969»M00117001523»M00117002119»M00119002528»M00122000395»M00124001410»P00119000033".contains(lsEmployNo)
-                    && !getOfficer((String) loJSON.get("sUserIDxx"))) {
+            if (!"M00110017110»P00119000033".contains(lsEmployNo)) {
 
                 this.poJSON = new JSONObject();
                 this.poJSON.put("result", "error");
@@ -186,42 +185,6 @@ public class StatusChange {
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         return poJSON;
-    }
-
-    public boolean getOfficer(String fsUserID) {
-        try {
-            String lsSQL = " SELECT "
-                    + " a.`sUserIDxx`"
-                    + ", b.`sEmployID`"
-                    + ", a.`nUserLevl`"
-                    + ", IFNULL(b.`cEmpRankx`,'12') cEmpRankx"
-                    + ", a.`sProdctID` "
-                    + ", b.`cRecdStat`"
-                    + ", a.`cUserStat`"
-                    + " FROM xxxSysUser a"
-                    + "   LEFT JOIN Employee_Master001 b ON a.`sEmployNo` = b.`sEmployID` "
-                    + " WHERE sProdctID IN(" + SQLUtil.toSQL(poGRider.getProductID())
-                    + "," + SQLUtil.toSQL("gRider") + ")"
-                    + " AND sUserIDxx = " + SQLUtil.toSQL(fsUserID)
-                    + " AND cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE);
-
-            ResultSet loRS = poGRider.executeQuery(lsSQL);
-            System.out.println(lsSQL);
-
-            if (MiscUtil.RecordCount(loRS) <= 0) {
-                return false;
-            }
-            loRS.beforeFirst();
-            while (loRS.next()) {
-                if (loRS.getInt("cEmpRankx") <= 6) {
-                    return true;
-                }
-            }
-
-            return false;
-        } catch (SQLException ex) {
-            return false;
-        }
     }
 
     public String getEmployNoUser(String fsUserID) {
