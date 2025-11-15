@@ -5,14 +5,24 @@
         <group name="LP IntegSys">
             <file>file:/D:/Guanzon/GMC%20SEG%20Folder%20-%20Java/lp-purchasing-agent/src/org/rmj/purchasing/agent/XMPOReceiving.java</file>
         </group>
-        <group>
-            <file>file:/C:/Users/Maynard/Documents/GitHub/lp-purchasing-agent/src/org/rmj/purchasing/agent/XMPurchaseOrder.java</file>
-        </group>
         <group name="integsys-lp"/>
         <group name="LP Integsys"/>
         <group name="Incentive System">
             <file>file:/D:/GMC_SEG_Folder%20-%20Maven/applicaciones-de-los-pedritos-ant/lp-purchasing-agent/src/org/rmj/purchasing/agent/AutoVoidTrans.java</file>
         </group>
         <group name="LP Integsys - She"/>
+        <group name="Los Pedritos - IntegSys - Java"/>
+        <group name="Main Integsys Java">
+            <file>file:/D:/000MNVProject/Los%20Pedritos%20IntegSys%20Java/lp-purchasing-agent/src/org/rmj/purchasing/agent/PurchaseOrders.java</file>
+        </group>
+        <group name="Los Pedritos IntegSys">
+            <file>file:/D:/000MNVProject/Los%20Pedritos%20IntegSys%20Java/lp-purchasing-agent/src/org/rmj/purchasing/agent/POReceiving.java</file>
+        </group>
+        <group/>
+        <group name="Los Pedritos (Java)">
+            <file>file:/D:/000MNVProject/Los%20Pedritos%20IntegSys%20Java/lp-purchasing-agent/src/org/rmj/purchasing/statusChange/StatusChangeController.java</file>
+            <file>file:/D:/000MNVProject/Los%20Pedritos%20IntegSys%20Java/lp-purchasing-agent/src/org/rmj/purchasing/agent/PurchaseOrders.java</file>
+            <file>file:/D:/000MNVProject/Los%20Pedritos%20IntegSys%20Java/lp-purchasing-agent/src/org/rmj/purchasing/statusChange/StatusChange.java</file>
+        </group>
     </open-files>
 </project-private>
