@@ -93,7 +93,7 @@ public class StatusChange {
 
         String lsApprovingOfficer = "";
         //system user level
-        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+//        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
             JSONObject loJSON = showFXDialog.getApproval(poGRider);
             if (loJSON == null) {
                 this.poJSON = new JSONObject();
@@ -121,10 +121,10 @@ public class StatusChange {
             }
 
             lsApprovingOfficer = loJSON.get("sUserIDxx") != null ? (String) loJSON.get("sUserIDxx") : poGRider.getUserID();
-        } else {
-            lsApprovingOfficer = poGRider.getUserID();
-
-        }
+//        } else {
+//            lsApprovingOfficer = poGRider.getUserID();
+//
+//        }
 
         String lsSQL = "";
 
