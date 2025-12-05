@@ -721,7 +721,7 @@ public class PurchaseOrders {
             }
 
             if (!loObject.getTranStat().equalsIgnoreCase(TransactionStatus.STATE_OPEN)) {
-                setMessage("Unable to close closed/cancelled/posted/voided transaction.");
+                setMessage("Unable to close approved/cancelled/posted/voided transaction.");
                 return lbResult;
             }
 
