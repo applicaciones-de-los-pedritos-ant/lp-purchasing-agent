@@ -165,6 +165,7 @@ public class StatusChange {
                 + " SET   cTranStat = " + SQLUtil.toSQL(statusRequest)
                 + ", sApproved = " + SQLUtil.toSQL(lsApprovingOfficer)
                 + ", dApproved = " + SQLUtil.toSQL(poGRider.getServerDate())
+                + ", sAprvCode = " + SQLUtil.toSQL("USERAPPROVAL")
                 + " WHERE sTransNox = " + SQLUtil.toSQL((sourceNo));
         if (this.poGRider.executeQuery(lsSQL, tableName, poGRider.getBranchCode(), "") <= 0L) {
 
