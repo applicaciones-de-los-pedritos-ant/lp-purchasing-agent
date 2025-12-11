@@ -1418,40 +1418,61 @@ public class PurchaseOrders {
             params.put("sApprval2", "-");
             params.put("sApprval3", "-");
 
-            lsSQL = "SELECT"
-                    + "  a.sTransNox"
-                    + ", b.sClientNm"
-                    + " FROM Tokenized_Approval_Request a"
-                    + " LEFT JOIN Client_Master b"
-                    + " ON a.sReqstdTo = b.sClientID"
-                    + " WHERE a.cTranStat = '1'"
-                    + " AND a.sSourceCd = 'PO'"
-                    + " AND a.sRqstType = 'LP'"
-                    + " AND a.sSourceNo = " + SQLUtil.toSQL(poData.getTransNox())
-                    + " ORDER BY a.dApproved"
-                    + " LIMIT 3";
+            if (poData.getApprovalCode().equals("USERAPPROVAL")) {
+                lsSQL = "SELECT"
+                        + "  a.sTransNox"
+                        + ", c.sClientNm"
+                        + " FROM PO_Master a"
+                        + " LEFT JOIN xxxSysUser b"
+                        + " ON a.sApproved = b.sUserIDxx"
+                        + " LEFT JOIN Client_Master c"
+                        + " ON b.sEmployNo = c.sClientID"
+                        + " WHERE a.cTranStat = '1'"
+                        + " AND a.sAprvCode = 'USERAPPROVAL'"
+                        + " AND a.sTransNox = " + SQLUtil.toSQL(poData.getTransNox())
+                        + " ORDER BY a.dApproved";
 
-            loRS = poGRider.executeQuery(lsSQL);
-
-            try {
-                int lnCtr = 0;
+                loRS = poGRider.executeQuery(lsSQL);
+                
                 while (loRS.next()) {
-                    switch (lnCtr) {
-                        case 0:
-                            params.put("sApprval1", loRS.getString("sTransNox") + " - " + loRS.getString("sClientNm"));
-                            break;
-                        case 1:
-                            params.put("sApprval2", loRS.getString("sTransNox") + " - " + loRS.getString("sClientNm"));
-                            break;
-                        default:
-                            params.put("sApprval3", loRS.getString("sTransNox") + " - " + loRS.getString("sClientNm"));
-                            break;
-                    }
-                    lnCtr++;
+                    params.put("sApprval1", loRS.getString("sTransNox") + " - " + loRS.getString("sClientNm"));
                 }
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-                return false;
+            } else {
+                lsSQL = "SELECT"
+                        + "  a.sTransNox"
+                        + ", b.sClientNm"
+                        + " FROM Tokenized_Approval_Request a"
+                        + " LEFT JOIN Client_Master b"
+                        + " ON a.sReqstdTo = b.sClientID"
+                        + " WHERE a.cTranStat = '1'"
+                        + " AND a.sSourceCd = 'PO'"
+                        + " AND a.sRqstType = 'LP'"
+                        + " AND a.sSourceNo = " + SQLUtil.toSQL(poData.getTransNox())
+                        + " ORDER BY a.dApproved"
+                        + " LIMIT 3";
+
+                loRS = poGRider.executeQuery(lsSQL);
+
+                try {
+                    int lnCtr = 0;
+                    while (loRS.next()) {
+                        switch (lnCtr) {
+                            case 0:
+                                params.put("sApprval1", loRS.getString("sTransNox") + " - " + loRS.getString("sClientNm"));
+                                break;
+                            case 1:
+                                params.put("sApprval2", loRS.getString("sTransNox") + " - " + loRS.getString("sClientNm"));
+                                break;
+                            default:
+                                params.put("sApprval3", loRS.getString("sTransNox") + " - " + loRS.getString("sClientNm"));
+                                break;
+                        }
+                        lnCtr++;
+                    }
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                    return false;
+                }
             }
 
 //            lsSQL = "SELECT sClientNm FROM Client_Master WHERE sClientID IN ("
@@ -1537,5 +1558,6 @@ public class PurchaseOrders {
     private ArrayList<UnitPODetail> paDetail;
     private ArrayList<UnitPOReceivingDetailOthers> paDetailOthers;
 
-    private final String pxeModuleName = PurchaseOrders.class.getSimpleName();
+    private final String pxeModuleName = PurchaseOrders.class
+            .getSimpleName();
 }
