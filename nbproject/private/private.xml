@@ -19,10 +19,6 @@
             <file>file:/D:/000MNVProject/Los%20Pedritos%20IntegSys%20Java/lp-purchasing-agent/src/org/rmj/purchasing/agent/POReceiving.java</file>
         </group>
         <group/>
-        <group name="Los Pedritos (Java)">
-            <file>file:/D:/000MNVProject/Los%20Pedritos%20IntegSys%20Java/lp-purchasing-agent/src/org/rmj/purchasing/statusChange/StatusChangeController.java</file>
-            <file>file:/D:/000MNVProject/Los%20Pedritos%20IntegSys%20Java/lp-purchasing-agent/src/org/rmj/purchasing/agent/PurchaseOrders.java</file>
-            <file>file:/D:/000MNVProject/Los%20Pedritos%20IntegSys%20Java/lp-purchasing-agent/src/org/rmj/purchasing/statusChange/StatusChange.java</file>
-        </group>
+        <group name="Los Pedritos (Java)"/>
     </open-files>
 </project-private>
